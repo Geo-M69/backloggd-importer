@@ -1,0 +1,64 @@
+{
+  "_comment": "Sanitized mock of Steam IPlayerService/GetOwnedGames response. AppIDs are real but names/playtimes are fabricated.",
+  "response": {
+    "game_count": 5,
+    "games": [
+      {
+        "appid": 730,
+        "name": "Counter-Strike 2",
+        "playtime_forever": 45230,
+        "playtime_windows_forever": 0,
+        "playtime_mac_forever": 0,
+        "playtime_linux_forever": 45230,
+        "playtime_2weeks": 0,
+        "rtime_last_played": 1700000000,
+        "has_community_visible_stats": true,
+        "img_icon_url": "8f0d1e2e3c4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c"
+      },
+      {
+        "appid": 440,
+        "name": "Team Fortress 2",
+        "playtime_forever": 21150,
+        "playtime_windows_forever": 21150,
+        "playtime_mac_forever": 0,
+        "playtime_linux_forever": 0,
+        "rtime_last_played": 1695000000,
+        "has_community_visible_stats": true,
+        "img_icon_url": "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b"
+      },
+      {
+        "appid": 570,
+        "name": "Dota 2",
+        "playtime_forever": 18760,
+        "playtime_windows_forever": 18760,
+        "playtime_mac_forever": 0,
+        "playtime_linux_forever": 0,
+        "rtime_last_played": 1705000000,
+        "has_community_visible_stats": true,
+        "img_icon_url": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
+      },
+      {
+        "appid": 4000,
+        "name": "Garry's Mod",
+        "playtime_forever": 8730,
+        "playtime_windows_forever": 8730,
+        "playtime_mac_forever": 0,
+        "playtime_linux_forever": 0,
+        "rtime_last_played": 1680000000,
+        "has_community_visible_stats": false,
+        "img_icon_url": "2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c"
+      },
+      {
+        "appid": 999999,
+        "name": "Unknown Test App",
+        "playtime_forever": 0,
+        "playtime_windows_forever": 0,
+        "playtime_mac_forever": 0,
+        "playtime_linux_forever": 0,
+        "rtime_last_played": 0,
+        "has_community_visible_stats": false,
+        "img_icon_url": null
+      }
+    ]
+  }
+}

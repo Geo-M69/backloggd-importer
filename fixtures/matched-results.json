@@ -1,0 +1,45 @@
+{
+  "_comment": "Expected match results when running the fixture data through the matcher.",
+  "matches": [
+    {
+      "steamAppId": 730,
+      "igdbId": 12345,
+      "igdbName": "Counter-Strike 2",
+      "backloggdSlug": "counter-strike-2",
+      "confidence": "exact",
+      "matchMethod": "steam-appid"
+    },
+    {
+      "steamAppId": 440,
+      "igdbId": 12346,
+      "igdbName": "Team Fortress 2",
+      "backloggdSlug": "team-fortress-2",
+      "confidence": "exact",
+      "matchMethod": "steam-appid"
+    },
+    {
+      "steamAppId": 570,
+      "igdbId": 12347,
+      "igdbName": "Dota 2",
+      "backloggdSlug": "dota-2",
+      "confidence": "exact",
+      "matchMethod": "steam-appid"
+    },
+    {
+      "steamAppId": 4000,
+      "igdbId": 12348,
+      "igdbName": "Garry's Mod",
+      "backloggdSlug": "garrys-mod",
+      "confidence": "exact",
+      "matchMethod": "steam-appid"
+    },
+    {
+      "steamAppId": 999999,
+      "igdbId": null,
+      "igdbName": null,
+      "backloggdSlug": null,
+      "confidence": "unmatched",
+      "matchMethod": null
+    }
+  ]
+}

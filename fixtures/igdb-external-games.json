@@ -1,0 +1,49 @@
+{
+  "_comment": "Sanitized mock of IGDB external-games response for the fixture Steam AppIDs.",
+  "games": [
+    {
+      "id": 12345,
+      "name": "Counter-Strike 2",
+      "slug": "counter-strike-2",
+      "externalGames": [
+        {
+          "category": 1,
+          "uid": "730"
+        }
+      ]
+    },
+    {
+      "id": 12346,
+      "name": "Team Fortress 2",
+      "slug": "team-fortress-2",
+      "externalGames": [
+        {
+          "category": 1,
+          "uid": "440"
+        }
+      ]
+    },
+    {
+      "id": 12347,
+      "name": "Dota 2",
+      "slug": "dota-2",
+      "externalGames": [
+        {
+          "category": 1,
+          "uid": "570"
+        }
+      ]
+    },
+    {
+      "id": 12348,
+      "name": "Garry's Mod",
+      "slug": "garrys-mod",
+      "externalGames": [
+        {
+          "category": 1,
+          "uid": "4000"
+        }
+      ]
+    }
+  ]
+}

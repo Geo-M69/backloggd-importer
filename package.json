@@ -1,0 +1,62 @@
+{
+  "name": "backloggd-importer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An assisted importer for matching a user's Steam library to Backloggd and preparing ownership and status updates for review.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint --fix src/ tests/",
+    "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' '*.{json,md,mjs}' 'fixtures/**/*.json'",
+    "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' '*.{json,md,mjs}' 'fixtures/**/*.json'",
+    "validate:config": "node --import dotenv/config dist/config/validate.js",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Geo-M69/backloggd-importer.git"
+  },
+  "keywords": [
+    "steam",
+    "backloggd",
+    "igdb",
+    "import",
+    "gaming"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Geo-M69/backloggd-importer/issues"
+  },
+  "homepage": "https://github.com/Geo-M69/backloggd-importer#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.13.0",
+    "eslint": "^9.22.0",
+    "eslint-config-prettier": "^10.1.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.26.0",
+    "vitest": "^3.0.8"
+  }
+}

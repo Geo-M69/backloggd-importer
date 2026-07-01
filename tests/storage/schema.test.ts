@@ -69,13 +69,13 @@ describe('schema', () => {
       db.close();
     });
 
-    it('rejects invalid proposal action', () => {
+    it('rejects invalid proposal kind', () => {
       const db = new Database(':memory:');
       db.exec(getCreateTableSQL());
       expect(() =>
         db
           .prepare(
-            'INSERT INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, action, match_confidence) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, proposal_kind, match_confidence) VALUES (?, ?, ?, ?, ?, ?, ?)',
           )
           .run('p1', 's1', 1, 99, 'some-game', 'delete-ownership', 'exact'),
       ).toThrow();
@@ -88,10 +88,61 @@ describe('schema', () => {
       expect(() =>
         db
           .prepare(
-            'INSERT INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, action, status, match_confidence) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, proposal_kind, status, match_confidence) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
           )
-          .run('p2', 's1', 1, 99, 'some-game', 'add-ownership', 'unknown-status', 'exact'),
+          .run('p2', 's1', 1, 99, 'some-game', 'ownership', 'unknown-status', 'exact'),
       ).toThrow();
+      db.close();
+    });
+
+    it('rejects invalid requires_manual_review value', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+      expect(() =>
+        db
+          .prepare(
+            'INSERT INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, proposal_kind, match_confidence, requires_manual_review) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          )
+          .run('p3', 's1', 1, 99, 'some-game', 'ownership', 'exact', 2),
+      ).toThrow();
+      db.close();
+    });
+
+    it('allows null igdb_id and backloggd_slug in proposals', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+      // Need parent rows for foreign keys
+      db.prepare('INSERT INTO games (app_id, title) VALUES (?, ?)').run(1, 'Test');
+      db.prepare('INSERT INTO import_sessions (id) VALUES (?)').run('s1');
+      expect(() =>
+        db
+          .prepare(
+            'INSERT INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, proposal_kind, match_confidence) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          )
+          .run('p4', 's1', 1, null, null, 'ownership', 'unmatched'),
+      ).not.toThrow();
+      db.close();
+    });
+
+    it('enforces unique (session, app, kind) constraint', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+      // Need parent rows for foreign keys
+      db.prepare('INSERT INTO games (app_id, title) VALUES (?, ?)').run(730, 'CS2');
+      db.prepare('INSERT INTO import_sessions (id) VALUES (?)').run('s1');
+
+      db.prepare(
+        'INSERT INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, proposal_kind, match_confidence) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ).run('p1', 's1', 730, 12345, 'cs2', 'ownership', 'exact');
+
+      // Second insert with same session + app + kind should replace (no error)
+      expect(() =>
+        db
+          .prepare(
+            'INSERT OR REPLACE INTO proposals (id, import_session_id, steam_app_id, igdb_id, backloggd_slug, proposal_kind, match_confidence) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          )
+          .run('p2', 's1', 730, 12345, 'cs2', 'ownership', 'exact'),
+      ).not.toThrow();
       db.close();
     });
 
@@ -152,6 +203,31 @@ describe('schema', () => {
           .prepare('INSERT INTO games (app_id, title, is_free) VALUES (?, ?, ?)')
           .run(12, 'Test', 'yes'),
       ).toThrow();
+      db.close();
+    });
+  });
+
+  describe('import_sessions policy_json column', () => {
+    it('accepts null policy_json', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+      db.prepare('INSERT INTO import_sessions (id) VALUES (?)').run('s1');
+      const row = db.prepare('SELECT policy_json FROM import_sessions WHERE id = ?').get('s1') as {
+        policy_json: string | null;
+      };
+      expect(row.policy_json).toBeNull();
+      db.close();
+    });
+
+    it('stores and retrieves policy_json', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+      const policy = JSON.stringify({ playtimeThresholdMinutes: 120 });
+      db.prepare('INSERT INTO import_sessions (id, policy_json) VALUES (?, ?)').run('s1', policy);
+      const row = db.prepare('SELECT policy_json FROM import_sessions WHERE id = ?').get('s1') as {
+        policy_json: string;
+      };
+      expect(JSON.parse(row.policy_json)).toEqual({ playtimeThresholdMinutes: 120 });
       db.close();
     });
   });

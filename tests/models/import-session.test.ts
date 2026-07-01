@@ -28,4 +28,21 @@ describe('createImportSession', () => {
     });
     expect(session.totalGames).toBe(0);
   });
+
+  it('accepts optional policyJson', () => {
+    const session = createImportSession({
+      id: 'session-policy',
+      totalGames: 50,
+      policyJson: JSON.stringify({ playtimeThresholdMinutes: 120 }),
+    });
+    expect(session.policyJson).toBe('{"playtimeThresholdMinutes":120}');
+  });
+
+  it('defaults policyJson to null when omitted', () => {
+    const session = createImportSession({
+      id: 'session-no-policy',
+      totalGames: 10,
+    });
+    expect(session.policyJson).toBeNull();
+  });
 });

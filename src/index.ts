@@ -21,8 +21,13 @@ export type {
   MatchConfidence,
   MatchMethod,
   Proposal,
-  ProposalAction,
+  ProposalKind,
   ProposalStatus,
+  ProposalPolicy,
+  OwnershipSuggestion,
+  StatusSuggestion,
+  PlaylogSuggestion,
+  SuggestionPayload,
   ImportSession,
   SessionStatus,
 } from './models/index.js';
@@ -78,3 +83,17 @@ export type {
   MatchResult,
   MatchRunStats,
 } from './igdb/index.js';
+
+// -- Review module --------------------------------------------------------
+
+export { generateProposals, approveExactMatches, buildManifest } from './review/index.js';
+
+export type {
+  GenerateResult,
+  GenerateOptions,
+  ApproveResult,
+  ImportManifest,
+  ManifestSummary,
+  ManifestItem,
+  ManifestApprovedProposal,
+} from './review/index.js';

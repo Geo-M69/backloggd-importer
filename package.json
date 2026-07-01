@@ -23,6 +23,9 @@
     "validate:config": "node --import dotenv/config dist/config/validate.js",
     "steam:export": "node --import dotenv/config dist/cli/steam-export.js",
     "igdb:match": "node --import dotenv/config dist/cli/igdb-match.js",
+    "import:propose": "node --import dotenv/config dist/cli/proposal-generate.js",
+    "import:approve-exact": "node --import dotenv/config dist/cli/proposal-approve.js",
+    "import:manifest": "node --import dotenv/config dist/cli/proposal-manifest.js",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },

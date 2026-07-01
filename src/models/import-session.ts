@@ -29,12 +29,18 @@ export interface ImportSession {
   skippedGames: number;
   /** Number of proposals that failed */
   failedGames: number;
+  /** JSON snapshot of the ProposalPolicy used for this session (nullable) */
+  policyJson: string | null;
 }
 
 /**
  * Create a new ImportSession.
  */
-export function createImportSession(data: { id: string; totalGames: number }): ImportSession {
+export function createImportSession(data: {
+  id: string;
+  totalGames: number;
+  policyJson?: string | null;
+}): ImportSession {
   return {
     id: data.id,
     startedAt: new Date().toISOString(),
@@ -47,5 +53,6 @@ export function createImportSession(data: { id: string; totalGames: number }): I
     appliedChanges: 0,
     skippedGames: 0,
     failedGames: 0,
+    policyJson: data.policyJson ?? null,
   };
 }

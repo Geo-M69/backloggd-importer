@@ -33,20 +33,27 @@ export function getCreateTableSQL(): string {
     );
 
     CREATE TABLE IF NOT EXISTS proposals (
-      id                  TEXT    PRIMARY KEY,
-      import_session_id   TEXT    NOT NULL,
-      steam_app_id        INTEGER NOT NULL,
-      igdb_id             INTEGER NOT NULL,
-      backloggd_slug      TEXT    NOT NULL,
-      action              TEXT    NOT NULL CHECK (action IN ('add-ownership', 'update-status', 'add-to-backlog', 'mark-played')),
-      status              TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'skipped', 'applied', 'failed')),
-      match_confidence    TEXT    NOT NULL CHECK (match_confidence IN ('exact', 'probable', 'ambiguous', 'unmatched')),
-      notes               TEXT,
-      created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
-      updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      id                      TEXT    PRIMARY KEY,
+      import_session_id       TEXT    NOT NULL,
+      steam_app_id            INTEGER NOT NULL,
+      steam_title             TEXT,
+      igdb_id                 INTEGER,
+      igdb_name               TEXT,
+      backloggd_slug          TEXT,
+      proposal_kind           TEXT    NOT NULL CHECK (proposal_kind IN ('ownership', 'status', 'playlog')),
+      status                  TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'skipped', 'deferred', 'blocked', 'applied', 'failed')),
+      match_confidence        TEXT    NOT NULL CHECK (match_confidence IN ('exact', 'probable', 'ambiguous', 'unmatched')),
+      requires_manual_review  INTEGER NOT NULL DEFAULT 0 CHECK (typeof(requires_manual_review) = 'integer' AND requires_manual_review IN (0, 1)),
+      suggested_payload       TEXT,
+      notes                   TEXT,
+      decision_notes          TEXT,
+      created_at              TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      updated_at              TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
       FOREIGN KEY (steam_app_id) REFERENCES games(app_id),
       FOREIGN KEY (import_session_id) REFERENCES import_sessions(id)
     );
+
+    CREATE INDEX IF NOT EXISTS idx_proposals_steam_app_id ON proposals(steam_app_id);
 
     CREATE TABLE IF NOT EXISTS import_sessions (
       id                  TEXT    PRIMARY KEY,
@@ -59,7 +66,8 @@ export function getCreateTableSQL(): string {
       approved_changes    INTEGER NOT NULL DEFAULT 0 CHECK (typeof(approved_changes) = 'integer' AND approved_changes >= 0),
       applied_changes     INTEGER NOT NULL DEFAULT 0 CHECK (typeof(applied_changes) = 'integer' AND applied_changes >= 0),
       skipped_games       INTEGER NOT NULL DEFAULT 0 CHECK (typeof(skipped_games) = 'integer' AND skipped_games >= 0),
-      failed_games        INTEGER NOT NULL DEFAULT 0 CHECK (typeof(failed_games) = 'integer' AND failed_games >= 0)
+      failed_games        INTEGER NOT NULL DEFAULT 0 CHECK (typeof(failed_games) = 'integer' AND failed_games >= 0),
+      policy_json         TEXT
     );
 
     CREATE TABLE IF NOT EXISTS api_cache (
@@ -72,5 +80,6 @@ export function getCreateTableSQL(): string {
     CREATE INDEX IF NOT EXISTS idx_matches_igdb_id ON matches(igdb_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_session ON proposals(import_session_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
+    CREATE INDEX IF NOT EXISTS idx_proposals_confidence ON proposals(match_confidence);
   `;
 }

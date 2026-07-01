@@ -4,7 +4,16 @@ export { createSteamGame } from './game.js';
 export type { GameMatch, MatchConfidence, MatchMethod } from './match.js';
 export { createGameMatch } from './match.js';
 
-export type { Proposal, ProposalAction, ProposalStatus } from './proposal.js';
+export type {
+  Proposal,
+  ProposalKind,
+  ProposalStatus,
+  ProposalPolicy,
+  OwnershipSuggestion,
+  StatusSuggestion,
+  PlaylogSuggestion,
+  SuggestionPayload,
+} from './proposal.js';
 export { createProposal } from './proposal.js';
 
 export type { ImportSession, SessionStatus } from './import-session.js';

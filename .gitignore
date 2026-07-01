@@ -2,5 +2,12 @@ node_modules/
 dist/
 .env*
 !.env.example
+exports/
 *.log
 .DS_Store
+import.db
+import.db-wal
+import.db-shm
+import.fixture.db
+import.fixture.db-wal
+import.fixture.db-shm

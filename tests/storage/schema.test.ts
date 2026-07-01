@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { getCreateTableSQL } from '../../src/storage/schema.js';
 
 describe('schema', () => {
-  it('produces valid SQL that creates all four tables', () => {
+  it('produces valid SQL that creates all five tables', () => {
     const db = new Database(':memory:');
     expect(() => db.exec(getCreateTableSQL())).not.toThrow();
 
@@ -16,6 +16,7 @@ describe('schema', () => {
     expect(tableNames).toContain('matches');
     expect(tableNames).toContain('proposals');
     expect(tableNames).toContain('import_sessions');
+    expect(tableNames).toContain('api_cache');
 
     db.close();
   });
@@ -151,6 +152,63 @@ describe('schema', () => {
           .prepare('INSERT INTO games (app_id, title, is_free) VALUES (?, ?, ?)')
           .run(12, 'Test', 'yes'),
       ).toThrow();
+      db.close();
+    });
+  });
+
+  describe('api_cache table', () => {
+    it('stores and retrieves a cached response', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+
+      db.prepare('INSERT INTO api_cache (cache_key, response_body) VALUES (?, ?)').run(
+        'test:cache:key',
+        '{"hello":"world"}',
+      );
+
+      const row = db
+        .prepare('SELECT response_body FROM api_cache WHERE cache_key = ?')
+        .get('test:cache:key') as { response_body: string };
+
+      expect(row.response_body).toBe('{"hello":"world"}');
+      db.close();
+    });
+
+    it('upserts on conflict', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+
+      db.prepare('INSERT INTO api_cache (cache_key, response_body) VALUES (?, ?)').run(
+        'k1',
+        'first',
+      );
+
+      db.prepare('INSERT OR REPLACE INTO api_cache (cache_key, response_body) VALUES (?, ?)').run(
+        'k1',
+        'second',
+      );
+
+      const row = db
+        .prepare('SELECT response_body FROM api_cache WHERE cache_key = ?')
+        .get('k1') as { response_body: string };
+      expect(row.response_body).toBe('second');
+      db.close();
+    });
+
+    it('records fetched_at automatically', () => {
+      const db = new Database(':memory:');
+      db.exec(getCreateTableSQL());
+
+      db.prepare('INSERT INTO api_cache (cache_key, response_body) VALUES (?, ?)').run(
+        'k-timestamp',
+        '{}',
+      );
+
+      const row = db
+        .prepare('SELECT fetched_at FROM api_cache WHERE cache_key = ?')
+        .get('k-timestamp') as { fetched_at: string };
+      expect(row.fetched_at).toBeTruthy();
+      expect(() => new Date(row.fetched_at)).not.toThrow();
       db.close();
     });
   });

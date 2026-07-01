@@ -15,6 +15,7 @@ export function getCreateTableSQL(): string {
       last_played_at      TEXT,
       is_free             INTEGER NOT NULL DEFAULT 0 CHECK (typeof(is_free) = 'integer' AND is_free IN (0, 1)),
       has_details         INTEGER NOT NULL DEFAULT 1 CHECK (typeof(has_details) = 'integer' AND has_details IN (0, 1)),
+      stale               INTEGER NOT NULL DEFAULT 0 CHECK (typeof(stale) = 'integer' AND stale IN (0, 1)),
       created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
       updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     );
@@ -60,6 +61,14 @@ export function getCreateTableSQL(): string {
       skipped_games       INTEGER NOT NULL DEFAULT 0 CHECK (typeof(skipped_games) = 'integer' AND skipped_games >= 0),
       failed_games        INTEGER NOT NULL DEFAULT 0 CHECK (typeof(failed_games) = 'integer' AND failed_games >= 0)
     );
+
+    CREATE TABLE IF NOT EXISTS api_cache (
+      cache_key           TEXT    PRIMARY KEY,
+      response_body       TEXT    NOT NULL,
+      fetched_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      expires_at          TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_matches_igdb_id ON matches(igdb_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_session ON proposals(import_session_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);

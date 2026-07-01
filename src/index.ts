@@ -27,5 +27,54 @@ export type {
   SessionStatus,
 } from './models/index.js';
 
-export { openDatabase, closeDatabase, getDatabase } from './storage/database.js';
+export { openDatabase, closeDatabase, getDatabase, runMigrations } from './storage/database.js';
 export { getCreateTableSQL } from './storage/schema.js';
+
+// -- Steam module ----------------------------------------------------------
+
+export {
+  fetchOwnedGames,
+  clearSteamCache,
+  steamCacheKey,
+  getSteamCacheExpiry,
+  validateSteamResponse,
+  isPlayableGame,
+  normalizeGame,
+  processAndStoreGames,
+  exportGames,
+  exportGamesJson,
+  exportGamesCsv,
+  readFixture,
+} from './steam/index.js';
+
+export type {
+  RawSteamGame,
+  RawSteamResponse,
+  GameExportRow,
+  ExportOptions,
+} from './steam/index.js';
+
+// -- IGDB module -----------------------------------------------------------
+
+export {
+  getAccessToken,
+  clearTokenCache,
+  isTokenValid,
+  RateLimiter,
+  queryExternalGames,
+  fetchExternalGames,
+  globalRateLimiter,
+  matchGames,
+  getUnmatchedAppIds,
+  getUnmatchedAppIdsNoRow,
+  groupByAppId,
+  classifyConfidence,
+} from './igdb/index.js';
+
+export type {
+  TwitchTokenResponse,
+  CachedToken,
+  IgdbExternalGame,
+  MatchResult,
+  MatchRunStats,
+} from './igdb/index.js';

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Async Render Game - Backloggd</title>
+  <style>
+    .custom-dropdown { position: relative; display: inline-block; min-width: 180px; }
+    .dropdown-trigger {
+      display: flex; align-items: center; justify-content: space-between;
+      border: 1px solid #ccc; padding: 6px 10px; cursor: pointer;
+      background: #fff; border-radius: 4px;
+    }
+    .dropdown-trigger::after { content: "\25BC"; margin-left: 8px; font-size: 10px; }
+    .dropdown-options {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      border: 1px solid #ccc; background: #fff; z-index: 100;
+      border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto;
+    }
+    .dropdown-options.open { display: block; }
+    .dropdown-option { padding: 6px 10px; cursor: pointer; }
+    .dropdown-option:hover { background: #f0f0f0; }
+    .dropdown-option.selected { background: #e0e7ff; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Async Render Game</h1>
+
+    <button id="log-or-review-btn">Log or review</button>
+
+    <div id="loading" style="display: none;">Loading...</div>
+
+    <div id="log-modal" class="modal" style="display: none;" role="dialog" aria-label="Log game">
+      <div class="modal-header">
+        <h2>Async Render Game (2024)</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="review">Review</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="journal">Journal</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="details" id="details-tab-btn">Details</button>
+      </div>
+
+      <!-- Review tab content (default visible) -->
+      <div class="tab-content" id="review-tab" data-tab="review">
+        <p>Write your review here...</p>
+      </div>
+
+      <!-- Journal tab content (hidden) -->
+      <div class="tab-content" id="journal-tab" data-tab="journal" style="display: none;">
+        <p>Journal content</p>
+      </div>
+
+      <!-- Details tab content (hidden initially) -->
+      <div class="tab-content" id="details-tab" data-tab="details" style="display: none;">
+        <div class="field">
+          <label>Played on</label>
+          <div class="custom-dropdown" id="played-on-dropdown" data-field="played-on">
+            <div class="dropdown-trigger" id="played-on-trigger" role="combobox" aria-label="Played on" tabindex="0">Select platform...</div>
+            <div class="dropdown-options" id="played-on-options">
+              <div class="dropdown-option" data-value="Windows PC">Windows PC</div>
+              <div class="dropdown-option" data-value="PlayStation 5">PlayStation 5</div>
+              <div class="dropdown-option" data-value="Steam Deck">Steam Deck</div>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Ownership</label>
+          <div class="custom-dropdown" id="ownership-dropdown" data-field="ownership">
+            <div class="dropdown-trigger" id="ownership-trigger" role="combobox" aria-label="Ownership" tabindex="0">Select ownership...</div>
+            <div class="dropdown-options" id="ownership-options">
+              <div class="dropdown-option" data-value="Owned">Owned</div>
+              <div class="dropdown-option" data-value="Subscription">Subscription</div>
+              <div class="dropdown-option" data-value="Borrowed">Borrowed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" id="create-log-btn">Create Log</button>
+    </div>
+
+    <script>
+      window.__logOrReviewClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__openerClickedAt = 0;
+      window.__renderRequestStartedAt = 0;
+      window.__detailsTabClickCount = 0;
+
+      function setupDropdown(containerId, optionsId, triggerId) {
+        var options = document.getElementById(optionsId);
+        var trigger = document.getElementById(triggerId);
+        trigger.addEventListener('click', function(e) {
+          e.stopPropagation();
+          options.classList.toggle('open');
+        });
+        options.querySelectorAll('.dropdown-option').forEach(function(opt) {
+          opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var value = this.getAttribute('data-value');
+            trigger.textContent = value;
+            options.classList.remove('open');
+            options.querySelectorAll('.dropdown-option').forEach(function(o) {
+              o.classList.remove('selected');
+            });
+            this.classList.add('selected');
+          });
+        });
+        document.addEventListener('click', function() { options.classList.remove('open'); });
+      }
+
+      setupDropdown('played-on-dropdown', 'played-on-options', 'played-on-trigger');
+      setupDropdown('ownership-dropdown', 'ownership-options', 'ownership-trigger');
+
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        window.__openerClickedAt = Date.now();
+        document.getElementById('loading').style.display = 'block';
+
+        setTimeout(function() {
+          window.__renderRequestStartedAt = Date.now();
+          fetch('https://backloggd.com/render-editor/891', { method: 'POST' })
+            .then(function() {
+              document.getElementById('loading').style.display = 'none';
+              document.getElementById('log-modal').style.display = 'block';
+            })
+            .catch(function() {
+              // The test route fulfills this request. Keep the fixture closed
+              // if the request is unexpectedly unavailable.
+            });
+        }, 350);
+      });
+
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var target = this.getAttribute('data-tab');
+          if (target === 'details') { window.__detailsTabClickCount++; }
+          document.querySelectorAll('.tab').forEach(function(t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+          document.querySelectorAll('.tab-content').forEach(function(tc) {
+            tc.style.display = tc.getAttribute('data-tab') === target ? 'block' : 'none';
+          });
+        });
+      });
+    </script>
+  </main>
+</body>
+</html>

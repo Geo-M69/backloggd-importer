@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>The Witcher 3 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>The Witcher 3</h1>
+    <!-- Compound opener: text contains both opener phrase and forbidden "Confirm" -->
+    <button id="compound-btn">Add to Library and Confirm</button>
+
+    <script>
+      window.__compoundClickCount = 0;
+      document.getElementById('compound-btn').addEventListener('click', function() {
+        window.__compoundClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

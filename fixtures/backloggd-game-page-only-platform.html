@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fallout 3 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Fallout 3</h1>
+
+    <!-- Only platform control is visible, ownership is missing -->
+    <section id="library-controls">
+      <label for="platform">Platform</label>
+      <select id="platform" name="platform">
+        <option value="">Select platform...</option>
+        <option value="Steam">Steam</option>
+        <option value="PlayStation">PlayStation</option>
+      </select>
+
+      <button type="button" id="save-btn">Save</button>
+    </section>
+
+    <script>
+      window.__saveClickCount = 0;
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

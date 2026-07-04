@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Team Fortress 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Team Fortress 2</h1>
+
+    <!-- Safe opener: "Log or review" -->
+    <button id="log-or-review-btn" data-testid="log-or-review">Log or review</button>
+
+    <!-- Log modal (hidden by default) -->
+    <div id="log-modal" class="modal" style="display: none;" role="dialog" aria-label="Log game">
+      <div class="modal-header">
+        <h2>Team Fortress 2 (2007)</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="review">Review</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="journal">Journal</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="details" id="details-tab-btn">Details</button>
+      </div>
+
+      <!-- Review tab content (default visible) -->
+      <div class="tab-content" id="review-tab" data-tab="review">
+        <div class="field">
+          <label for="platform">Platform</label>
+          <select id="platform" name="platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+            <option value="PlayStation">PlayStation</option>
+          </select>
+        </div>
+        <!-- Note: No Ownership control in Review tab -->
+      </div>
+
+      <!-- Journal tab content (hidden) -->
+      <div class="tab-content" id="journal-tab" data-tab="journal" style="display: none;">
+        <p>Journal content</p>
+      </div>
+
+      <!-- Details tab content (hidden initially) -->
+      <div class="tab-content" id="details-tab" data-tab="details" style="display: none;">
+        <div class="field">
+          <label for="ownership_type">Ownership</label>
+          <select id="ownership_type" name="ownership_type">
+            <option value="">Select ownership...</option>
+            <option value="Owned">Owned</option>
+            <option value="Physical">Physical</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Status buttons -->
+      <div class="status-buttons">
+        <button type="button" data-status="completed">Completed</button>
+        <button type="button" data-status="playing">Playing</button>
+        <button type="button" data-status="backlog">Backlog</button>
+        <button type="button" data-status="wishlist">Wishlist</button>
+      </div>
+
+      <!-- Final action: Create Log -->
+      <button type="button" id="create-log-btn">Create Log</button>
+
+      <!-- Use Full Editor link -->
+      <a href="#" id="full-editor-link">Use Full Editor</a>
+
+      <!-- Cancel button -->
+      <button type="button" id="cancel-btn">Cancel</button>
+    </div>
+
+    <script>
+      // Click counters for safety verification
+      window.__logOrReviewClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__fullEditorClickCount = 0;
+      window.__statusClickCount = 0;
+      window.__detailsTabClickCount = 0;
+      window.__cancelClickCount = 0;
+
+      // Opener: Log or review
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        document.getElementById('log-modal').style.display = 'block';
+      });
+
+      // Create Log (never clicked)
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+
+      // Use Full Editor (never clicked)
+      document.getElementById('full-editor-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.__fullEditorClickCount++;
+      });
+
+      // Status buttons (never clicked)
+      document.querySelectorAll('[data-status]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          window.__statusClickCount++;
+        });
+      });
+
+      // Cancel
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        window.__cancelClickCount++;
+        document.getElementById('log-modal').style.display = 'none';
+      });
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var target = this.getAttribute('data-tab');
+
+          if (target === 'details') {
+            window.__detailsTabClickCount++;
+          }
+
+          // Update tab active states
+          document.querySelectorAll('.tab').forEach(function(t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+
+          // Show/hide tab content
+          document.querySelectorAll('.tab-content').forEach(function(tc) {
+            tc.style.display = tc.getAttribute('data-tab') === target ? 'block' : 'none';
+          });
+        });
+      });
+    </script>
+  </main>
+</body>
+</html>

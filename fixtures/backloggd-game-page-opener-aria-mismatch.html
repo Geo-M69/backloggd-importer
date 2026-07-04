@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BioShock Infinite - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>BioShock Infinite</h1>
+
+    <!-- Visible text matches exact opener "Add to Library", but aria-label
+         contains the forbidden term "Save".  The accessible name computed by
+         the browser will be the aria-label value ("Add to Library and Save"),
+         so role=button[name="Add to Library"] will NOT match.
+         However button:text-is("Add to Library") WOULD match because it
+         checks visible text only.  The aria-label check in revealEditor must
+         catch this. -->
+    <button
+      id="deceptive-opener"
+      aria-label="Add to Library and Save"
+    >Add to Library</button>
+
+    <script>
+      window.__openerClickCount = 0;
+      document.getElementById('deceptive-opener').addEventListener('click', function() {
+        window.__openerClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

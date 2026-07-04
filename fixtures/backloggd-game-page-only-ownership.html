@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BioShock - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>BioShock</h1>
+
+    <!-- Only ownership control is visible, platform is missing -->
+    <section id="library-controls">
+      <label for="ownership_type">Ownership</label>
+      <select id="ownership_type" name="ownership_type">
+        <option value="">Select ownership...</option>
+        <option value="Digital">Digital</option>
+        <option value="Physical">Physical</option>
+      </select>
+
+      <button type="button" id="save-btn">Save</button>
+    </section>
+
+    <script>
+      window.__saveClickCount = 0;
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

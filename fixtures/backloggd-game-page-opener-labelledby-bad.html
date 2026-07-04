@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Destiny 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Destiny 2</h1>
+
+    <!-- The button's visible text is the safe opener "Add to Library", but it
+         has aria-labelledby pointing to an element whose text includes "and
+         Save".  The browser's computed accessible name becomes "Add to Library
+         and Save", even though the visible text is clean.  This button MUST be
+         rejected. -->
+    <button id="deceptive-opener" aria-labelledby="hidden-save-ref">Add to Library</button>
+    <span id="hidden-save-ref" style="display:none">and Save</span>
+
+    <script>
+      window.__openerClickCount = 0;
+      document.getElementById('deceptive-opener').addEventListener('click', function() {
+        window.__openerClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

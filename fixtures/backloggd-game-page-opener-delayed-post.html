@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Team Fortress 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Team Fortress 2</h1>
+
+    <button id="add-to-library-btn">Add to Library</button>
+
+    <div id="library-modal" class="modal" style="display: none;" role="dialog" aria-label="Edit Library">
+      <div class="modal-content">
+        <label for="platform">Platform</label>
+        <select id="platform" name="platform">
+          <option value="">Select platform...</option>
+          <option value="Steam">Steam</option>
+        </select>
+        <label for="ownership_type">Ownership</label>
+        <select id="ownership_type" name="ownership_type">
+          <option value="">Select ownership...</option>
+          <option value="Digital">Digital</option>
+        </select>
+        <button type="button" id="save-btn">Save</button>
+      </div>
+    </div>
+
+    <script>
+      window.__saveClickCount = 0;
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+      document.getElementById('add-to-library-btn').addEventListener('click', function() {
+        // Show modal immediately
+        document.getElementById('library-modal').style.display = 'block';
+        // Schedule a delayed POST (300 ms) that the write guard will block
+        setTimeout(async () => {
+          try {
+            await fetch('https://backloggd.com/api/library/', { method: 'POST' });
+          } catch {
+            // expected to fail
+          }
+        }, 300);
+      });
+    </script>
+  </main>
+</body>
+</html>

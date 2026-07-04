@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Half-Life 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Half-Life 2</h1>
+
+    <!-- Safe opener: "Log or review" -->
+    <button id="log-or-review-btn" data-testid="log-or-review">Log or review</button>
+
+    <!-- Log modal (hidden by default) -->
+    <div id="log-modal" class="modal" style="display: none;" role="dialog" aria-label="Log game">
+      <div class="modal-header">
+        <h2>Half-Life 2 (2004)</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="review">Review</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="details" id="details-tab-btn">Details</button>
+      </div>
+
+      <!-- Review tab content -->
+      <div class="tab-content" id="review-tab" data-tab="review">
+        <div class="field">
+          <label for="platform">Platform</label>
+          <select id="platform" name="platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+            <option value="PlayStation">PlayStation</option>
+          </select>
+        </div>
+        <!-- No Ownership control in Review -->
+      </div>
+
+      <!-- Details tab content (hidden) -->
+      <div class="tab-content" id="details-tab" data-tab="details" style="display: none;">
+        <div class="field">
+          <label for="ownership_type">Ownership</label>
+          <select id="ownership_type" name="ownership_type">
+            <option value="">Select ownership...</option>
+            <option value="Owned">Owned</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Create Log -->
+      <button type="button" id="create-log-btn">Create Log</button>
+      <button type="button" id="cancel-btn">Cancel</button>
+    </div>
+
+    <script>
+      window.__logOrReviewClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__detailsTabClickCount = 0;
+
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        document.getElementById('log-modal').style.display = 'block';
+      });
+
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        document.getElementById('log-modal').style.display = 'none';
+      });
+
+      // Tab switching — Details click triggers a POST fetch that gets blocked
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var targetThis = this.getAttribute('data-tab');
+          if (targetThis === 'details') {
+            window.__detailsTabClickCount++;
+            // Trigger a POST that the write guard will block
+            fetch('https://backloggd.com/api/log/', { method: 'POST' }).catch(function() {});
+          }
+          document.querySelectorAll('.tab').forEach(function(t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+          document.querySelectorAll('.tab-content').forEach(function(tc) {
+            tc.style.display = tc.getAttribute('data-tab') === targetThis ? 'block' : 'none';
+          });
+        });
+      });
+    </script>
+  </main>
+</body>
+</html>

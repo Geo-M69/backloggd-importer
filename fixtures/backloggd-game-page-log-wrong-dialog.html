@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fallout 4 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Fallout 4</h1>
+
+    <!-- Page-level log cue (outside any dialog) -->
+    <span id="page-level-cue">Platform</span>
+
+    <!-- Safe opener: "Log or review" -->
+    <button id="log-or-review-btn" data-testid="log-or-review">Log or review</button>
+
+    <!-- Wrong dialog: a generic modal that does NOT contain expected log cues -->
+    <div id="wrong-modal" class="modal" style="display: none;" role="dialog" aria-label="Generic">
+      <div class="modal-header">
+        <h2>Some other dialog</h2>
+      </div>
+      <p>This is the wrong modal - no tabs, no Platform select, no Create Log.</p>
+      <button type="button" id="close-btn">Close</button>
+    </div>
+
+    <script>
+      window.__logOrReviewClickCount = 0;
+      window.__wrongModalCloseClickCount = 0;
+
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        // Open the WRONG modal (generic, not the expected log modal)
+        document.getElementById('wrong-modal').style.display = 'block';
+      });
+
+      document.getElementById('close-btn').addEventListener('click', function() {
+        window.__wrongModalCloseClickCount++;
+        document.getElementById('wrong-modal').style.display = 'none';
+      });
+    </script>
+  </main>
+</body>
+</html>

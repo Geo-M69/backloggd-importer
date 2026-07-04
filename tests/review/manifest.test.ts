@@ -307,5 +307,69 @@ describe('manifest export', () => {
       expect(manifest.summary.totalApproved).toBe(0);
       expect(manifest.manifestVersion).toBe('1.0.0');
     });
+
+    it('builds correct backloggdUrl from a known slug', () => {
+      db.prepare('INSERT INTO games (app_id, title, playtime_minutes) VALUES (?, ?, ?)').run(
+        4000,
+        "Garry's Mod",
+        100,
+      );
+      db.prepare(
+        'INSERT INTO matches (steam_app_id, igdb_id, igdb_name, backloggd_slug, confidence, match_method) VALUES (?, ?, ?, ?, ?, ?)',
+      ).run(4000, 12348, "Garry's Mod (IGDB)", 'garry-s-mod', 'exact', 'steam-appid');
+
+      generateProposals(db);
+      approveExactMatches(undefined, db);
+
+      const manifest = buildManifest(undefined, db);
+      expect(manifest.summary.totalApproved).toBe(1);
+
+      const item = manifest.items[0];
+      expect(item.steamAppId).toBe(4000);
+      expect(item.backloggdSlug).toBe('garry-s-mod');
+      expect(item.backloggdUrl).toBe('https://www.backloggd.com/games/garry-s-mod/');
+    });
+
+    it('produces null backloggdUrl when slug is null', () => {
+      db.prepare('INSERT INTO games (app_id, title, playtime_minutes) VALUES (?, ?, ?)').run(
+        4000,
+        "Garry's Mod",
+        100,
+      );
+      db.prepare(
+        'INSERT INTO matches (steam_app_id, igdb_id, igdb_name, backloggd_slug, confidence, match_method) VALUES (?, ?, ?, ?, ?, ?)',
+      ).run(4000, 12348, "Garry's Mod (IGDB)", null, 'unmatched', null);
+
+      generateProposals(db);
+      approveExactMatches(undefined, db);
+
+      const manifest = buildManifest(undefined, db);
+      // Item with null slug should not be approved (blocked by ownershipDefaults)
+      expect(manifest.summary.totalApproved).toBe(0);
+    });
+
+    it('does not emit garrys-mod in fixture-generated manifest', () => {
+      // Seed Garry's Mod game data
+      db.prepare('INSERT INTO games (app_id, title, playtime_minutes) VALUES (?, ?, ?)').run(
+        4000,
+        "Garry's Mod",
+        100,
+      );
+      // Match row with the IGDB slug (as returned by the fixture)
+      db.prepare(
+        'INSERT INTO matches (steam_app_id, igdb_id, igdb_name, backloggd_slug, confidence, match_method) VALUES (?, ?, ?, ?, ?, ?)',
+      ).run(4000, 12348, "Garry's Mod (IGDB)", 'garry-s-mod', 'exact', 'steam-appid');
+
+      generateProposals(db);
+      approveExactMatches(undefined, db);
+
+      const manifest = buildManifest(undefined, db);
+      const json = JSON.stringify(manifest);
+
+      // The manifest must never contain the naive IGDB slug
+      expect(json).not.toContain('garrys-mod');
+      // The manifest must contain the corrected Backloggd slug
+      expect(json).toContain('garry-s-mod');
+    });
   });
 });

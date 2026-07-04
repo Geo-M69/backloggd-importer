@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Portal 2</h1>
+
+    <!-- Outside-modal decoy controls (should be ignored) -->
+    <div id="outside-decoys">
+      <!-- Decoy Platform select -->
+      <select id="decoy-platform" data-testid="decoy-platform">
+        <option value="">Decoy platform...</option>
+        <option value="Xbox">Xbox</option>
+      </select>
+
+      <!-- Decoy Ownership select -->
+      <select id="decoy-ownership" data-testid="decoy-ownership">
+        <option value="">Decoy ownership...</option>
+        <option value="Physical">Physical</option>
+      </select>
+
+      <!-- Decoy Details tab (outside dialog) -->
+      <button id="decoy-details" data-testid="decoy-details">Details</button>
+
+      <!-- Decoy Create Log (outside dialog) -->
+      <button id="decoy-create-log" data-testid="decoy-create-log">Create Log</button>
+    </div>
+
+    <!-- Safe opener: "Log or review" -->
+    <button id="log-or-review-btn" data-testid="log-or-review">Log or review</button>
+
+    <!-- Real log modal (hidden by default) -->
+    <div id="log-modal" class="modal" style="display: none;" role="dialog" aria-label="Log game">
+      <div class="modal-header">
+        <h2>Portal 2 (2011)</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="review">Review</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="details" id="details-tab-btn">Details</button>
+      </div>
+
+      <!-- Review tab content (default visible) -->
+      <div class="tab-content" id="review-tab" data-tab="review">
+        <div class="field">
+          <label for="platform">Platform</label>
+          <select id="platform" name="platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+          </select>
+        </div>
+        <!-- No Ownership in Review tab -->
+      </div>
+
+      <!-- Details tab content (hidden) -->
+      <div class="tab-content" id="details-tab" data-tab="details" style="display: none;">
+        <div class="field">
+          <label for="ownership_type">Ownership</label>
+          <select id="ownership_type" name="ownership_type">
+            <option value="">Select ownership...</option>
+            <option value="Owned">Owned</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Status buttons -->
+      <div class="status-buttons">
+        <button type="button" data-status="completed">Completed</button>
+        <button type="button" data-status="playing">Playing</button>
+        <button type="button" data-status="backlog">Backlog</button>
+        <button type="button" data-status="wishlist">Wishlist</button>
+      </div>
+
+      <!-- Create Log -->
+      <button type="button" id="create-log-btn">Create Log</button>
+
+      <!-- Use Full Editor -->
+      <a href="#" id="full-editor-link">Use Full Editor</a>
+
+      <!-- Cancel -->
+      <button type="button" id="cancel-btn">Cancel</button>
+
+      <!-- Rating stars -->
+      <div class="rating-stars">
+        <button class="star" data-rating="1" aria-label="Rate 1 star">★</button>
+        <button class="star" data-rating="2" aria-label="Rate 2 stars">★</button>
+        <button class="star" data-rating="3" aria-label="Rate 3 stars">★</button>
+      </div>
+
+      <!-- Review submit -->
+      <button type="button" id="review-submit-btn">Submit Review</button>
+
+      <!-- Journal submit -->
+      <button type="button" id="journal-submit-btn">Submit Journal Entry</button>
+    </div>
+
+    <script>
+      // Click counters for all unsafe controls
+      window.__logOrReviewClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__fullEditorClickCount = 0;
+      window.__statusClickCount = 0;
+      window.__detailsTabClickCount = 0;
+      window.__decoyDetailsClickCount = 0;
+      window.__decoyPlatformChanged = 0;
+      window.__decoyOwnershipChanged = 0;
+      window.__decoyCreateLogClickCount = 0;
+      window.__starClickCount = 0;
+      window.__reviewSubmitClickCount = 0;
+      window.__journalSubmitClickCount = 0;
+      window.__cancelClickCount = 0;
+
+      // Opener
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        document.getElementById('log-modal').style.display = 'block';
+      });
+
+      // Create Log (never clicked in real flow)
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+
+      // Full Editor (never clicked)
+      document.getElementById('full-editor-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.__fullEditorClickCount++;
+      });
+
+      // Status buttons (never clicked)
+      document.querySelectorAll('[data-status]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          window.__statusClickCount++;
+        });
+      });
+
+      // Rating stars (never clicked)
+      document.querySelectorAll('.star').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          window.__starClickCount++;
+        });
+      });
+
+      // Review submit (never clicked)
+      document.getElementById('review-submit-btn').addEventListener('click', function() {
+        window.__reviewSubmitClickCount++;
+      });
+
+      // Journal submit (never clicked)
+      document.getElementById('journal-submit-btn').addEventListener('click', function() {
+        window.__journalSubmitClickCount++;
+      });
+
+      // Cancel
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        window.__cancelClickCount++;
+        document.getElementById('log-modal').style.display = 'none';
+      });
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var target = this.getAttribute('data-tab');
+          if (target === 'details') {
+            window.__detailsTabClickCount++;
+          }
+          document.querySelectorAll('.tab').forEach(function(t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+          document.querySelectorAll('.tab-content').forEach(function(tc) {
+            tc.style.display = tc.getAttribute('data-tab') === target ? 'block' : 'none';
+          });
+        });
+      });
+
+      // Decoy controls (should not be interacted with)
+      document.getElementById('decoy-details').addEventListener('click', function() {
+        window.__decoyDetailsClickCount++;
+      });
+      document.getElementById('decoy-platform').addEventListener('change', function() {
+        window.__decoyPlatformChanged++;
+      });
+      document.getElementById('decoy-ownership').addEventListener('change', function() {
+        window.__decoyOwnershipChanged++;
+      });
+      document.getElementById('decoy-create-log').addEventListener('click', function() {
+        window.__decoyCreateLogClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

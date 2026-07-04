@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Portal</h1>
+
+    <!-- Safe opener: "Log or review" -->
+    <button id="log-or-review-btn" data-testid="log-or-review">Log or review</button>
+
+    <!-- A generic dialog that does NOT contain expected log modal cues.
+         No tabs, no Platform label, no Create Log button. -->
+    <div id="generic-dialog" class="modal" style="display: none;" role="dialog" aria-label="Generic">
+      <p>This is not the expected log modal.</p>
+      <button type="button" id="close-btn">Close</button>
+    </div>
+
+    <script>
+      window.__logOrReviewClickCount = 0;
+
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        // Open a generic dialog instead of the expected log modal
+        document.getElementById('generic-dialog').style.display = 'block';
+      });
+
+      document.getElementById('close-btn').addEventListener('click', function() {
+        document.getElementById('generic-dialog').style.display = 'none';
+      });
+    </script>
+  </main>
+</body>
+</html>

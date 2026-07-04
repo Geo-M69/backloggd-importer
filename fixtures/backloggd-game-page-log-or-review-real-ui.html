@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Team Fortress 2 - Backloggd</title>
+  <style>
+    .custom-dropdown { position: relative; display: inline-block; min-width: 180px; }
+    .dropdown-trigger {
+      display: flex; align-items: center; justify-content: space-between;
+      border: 1px solid #ccc; padding: 6px 10px; cursor: pointer;
+      background: #fff; border-radius: 4px;
+    }
+    .dropdown-trigger::after { content: "\25BC"; margin-left: 8px; font-size: 10px; }
+    .dropdown-options {
+      display: none; position: absolute; top: 100%; left: 0; right: 0;
+      border: 1px solid #ccc; background: #fff; z-index: 100;
+      border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto;
+    }
+    .dropdown-options.open { display: block; }
+    .dropdown-option { padding: 6px 10px; cursor: pointer; }
+    .dropdown-option:hover { background: #f0f0f0; }
+    .dropdown-option.selected { background: #e0e7ff; font-weight: bold; }
+    .ownership-click-blocker {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Team Fortress 2</h1>
+
+    <!-- Safe opener: "Log or review" -->
+    <button id="log-or-review-btn" data-testid="log-or-review">Log or review</button>
+
+    <!-- Log modal (hidden by default) -->
+    <div id="log-modal" class="modal" style="display: none;" role="dialog" aria-label="Log game">
+      <div class="modal-header">
+        <h2>Team Fortress 2 (2007)</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="review">Review</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="journal">Journal</button>
+        <div class="tab" aria-selected="false" data-tab="details" id="details-tab-btn" tabindex="0">Details</div>
+      </div>
+
+      <!-- Review tab content (default visible) -->
+      <div class="tab-content" id="review-tab" data-tab="review">
+        <p>Write your review here...</p>
+      </div>
+
+      <!-- Journal tab content (hidden) -->
+      <div class="tab-content" id="journal-tab" data-tab="journal" style="display: none;">
+        <p>Journal content</p>
+      </div>
+
+      <!-- Details tab content (hidden initially) -->
+      <div class="tab-content" id="details-tab" data-tab="details" style="display: none;">
+        <!-- Nearby decoy field from the real Details layout -->
+        <div class="field" id="bundle-played-field">
+          <label>Bundle played</label>
+          <div class="choices custom-dropdown" id="bundle-played-dropdown">
+            <div class="choices__inner dropdown-trigger" id="bundle-played-trigger" tabindex="0">Specify an edition...</div>
+            <div class="choices__list choices__list--dropdown dropdown-options" id="bundle-played-options">
+              <div class="choices__item dropdown-option" data-value="Orange Box">Orange Box</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Played on field — custom dropdown -->
+        <div class="field" id="played-on-field">
+          <label>Played on</label>
+          <div class="choices custom-dropdown" id="played-on-dropdown">
+            <div class="choices__inner dropdown-trigger" id="played-on-trigger" role="combobox" aria-label="Played on" tabindex="0">Played platform</div>
+            <div class="choices__list choices__list--dropdown dropdown-options" id="played-on-options">
+              <div class="choices__item dropdown-option" data-value="Windows PC">Windows PC</div>
+              <div class="choices__item dropdown-option" data-value="PlayStation 5">PlayStation 5</div>
+              <div class="choices__item dropdown-option" data-value="Nintendo Switch">Nintendo Switch</div>
+              <div class="choices__item dropdown-option" data-value="Steam Deck">Steam Deck</div>
+              <div class="choices__item dropdown-option" data-value="Xbox Series X|S">Xbox Series X|S</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ownership field — Choices-style custom dropdown. The visible
+             trigger intentionally has no Ownership accessible name or
+             data-field attribute, matching the live label-adjacent shape. -->
+        <div class="field" id="ownership-field">
+          <label>Ownership</label>
+          <div class="choices custom-dropdown" id="ownership-dropdown">
+            <div class="choices__inner dropdown-trigger" id="ownership-trigger" role="combobox" aria-controls="ownership-options" aria-expanded="false" tabindex="0">physical, digital, subscr...</div>
+            <div class="choices__list choices__list--dropdown dropdown-options" id="ownership-options" role="listbox">
+              <div class="choices__item dropdown-option" data-value="Owned" role="option">Owned</div>
+              <div class="choices__item dropdown-option" data-value="Subscription" role="option">Subscription</div>
+              <div class="choices__item dropdown-option" data-value="Borrowed" role="option">Borrowed</div>
+              <div class="choices__item dropdown-option" data-value="Watched" role="option">Watched</div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="delete-log-btn">Delete this log</button>
+      </div>
+
+      <!-- Status buttons -->
+      <div class="status-buttons">
+        <button type="button" data-status="completed">Completed</button>
+        <button type="button" data-status="playing">Playing</button>
+        <button type="button" data-status="backlog">Backlog</button>
+        <button type="button" data-status="wishlist">Wishlist</button>
+      </div>
+
+      <!-- Rating stars -->
+      <div class="rating-stars">
+        <span class="star" data-rating="1">★</span>
+        <span class="star" data-rating="2">★</span>
+        <span class="star" data-rating="3">★</span>
+        <span class="star" data-rating="4">★</span>
+        <span class="star" data-rating="5">★</span>
+      </div>
+
+      <!-- Review text -->
+      <textarea id="review-text" placeholder="Write your review..."></textarea>
+
+      <!-- Review submit -->
+      <button type="button" id="review-submit-btn">Submit Review</button>
+
+      <!-- Journal submit -->
+      <button type="button" id="journal-submit-btn">Submit Journal</button>
+
+      <!-- Final action: Create Log -->
+      <button type="button" id="create-log-btn">Create Log</button>
+
+      <!-- Use Full Editor link -->
+      <a href="#" id="full-editor-link">Use Full Editor</a>
+
+      <!-- Cancel button -->
+      <button type="button" id="cancel-btn">Cancel</button>
+    </div>
+
+    <script>
+      // Click counters for safety verification
+      window.__logOrReviewClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__fullEditorClickCount = 0;
+      window.__statusClickCount = 0;
+      window.__detailsTabClickCount = 0;
+      window.__cancelClickCount = 0;
+      window.__starClickCount = 0;
+      window.__reviewSubmitClickCount = 0;
+      window.__journalSubmitClickCount = 0;
+      window.__ownershipOwnedClickCount = 0;
+      window.__ownershipTriggerClickCount = 0;
+      window.__ownershipSelectedAfterDetailsActivation = false;
+      window.__playedOnClickCount = 0;
+      window.__bundlePlayedClickCount = 0;
+      window.__deleteLogClickCount = 0;
+      window.__portalOwnedVisibleBeforeOwnershipOpen = false;
+
+      var ownershipMode = new URLSearchParams(window.location.search).get('ownershipMode');
+      if (ownershipMode === 'missing-option') {
+        document.querySelector('#ownership-options [data-value="Owned"]').remove();
+      }
+      if (ownershipMode === 'hidden-duplicate') {
+        var hiddenDuplicate = document.createElement('div');
+        hiddenDuplicate.setAttribute('role', 'option');
+        hiddenDuplicate.textContent = 'Owned';
+        hiddenDuplicate.style.display = 'none';
+        document.body.appendChild(hiddenDuplicate);
+      }
+      if (ownershipMode === 'ambiguous') {
+        var ambiguousPopup = document.createElement('div');
+        ambiguousPopup.id = 'ownership-ambiguous-popup';
+        ambiguousPopup.className = 'dropdown-options';
+        ambiguousPopup.setAttribute('role', 'listbox');
+        ambiguousPopup.innerHTML = '<div class="dropdown-option" role="option">Owned</div>';
+        document.body.appendChild(ambiguousPopup);
+      }
+      if (ownershipMode === 'click-failure') {
+        var clickBlocker = document.createElement('div');
+        clickBlocker.className = 'ownership-click-blocker';
+        document.getElementById('ownership-options').appendChild(clickBlocker);
+      }
+
+      // Helper: set up a custom dropdown
+      function setupDropdown(containerId, optionsId, triggerId, clickCounter) {
+        var container = document.getElementById(containerId);
+        var options = document.getElementById(optionsId);
+        var trigger = document.getElementById(triggerId);
+
+        trigger.addEventListener('click', function(e) {
+          e.stopPropagation();
+          options.classList.toggle('open');
+          trigger.setAttribute('aria-expanded', options.classList.contains('open') ? 'true' : 'false');
+          if (containerId === 'ownership-dropdown' && ownershipMode === 'ambiguous') {
+            document.getElementById('ownership-ambiguous-popup').classList.toggle('open');
+          }
+          if (clickCounter) window[clickCounter]++;
+        });
+
+        options.querySelectorAll('.dropdown-option').forEach(function(opt) {
+          opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var value = this.getAttribute('data-value');
+            if (!(containerId === 'ownership-dropdown' && ownershipMode === 'no-update')) {
+              trigger.textContent = value;
+            }
+            options.classList.remove('open');
+            // Mark selected
+            options.querySelectorAll('.dropdown-option').forEach(function(o) {
+              o.classList.remove('selected');
+            });
+            this.classList.add('selected');
+          });
+        });
+
+        // Close on outside click
+        document.addEventListener('click', function() {
+          options.classList.remove('open');
+        });
+      }
+
+      setupDropdown('bundle-played-dropdown', 'bundle-played-options', 'bundle-played-trigger', '__bundlePlayedClickCount');
+      setupDropdown('played-on-dropdown', 'played-on-options', 'played-on-trigger', '__playedOnClickCount');
+      setupDropdown('ownership-dropdown', 'ownership-options', 'ownership-trigger', '__ownershipTriggerClickCount');
+
+      if (ownershipMode === 'portal' || ownershipMode === 'ambiguous') {
+        document.body.appendChild(document.getElementById('ownership-options'));
+      }
+      if (ownershipMode === 'ambiguous') {
+        document.getElementById('ownership-trigger').removeAttribute('aria-controls');
+      }
+      if (ownershipMode === 'missing-trigger') {
+        document.getElementById('ownership-trigger').remove();
+      }
+
+      window.__portalOwnedVisibleBeforeOwnershipOpen =
+        document.querySelector('#ownership-options [data-value="Owned"]')?.offsetParent !== null;
+
+      // Ownership Owned click tracking
+      document.querySelectorAll('#ownership-options .dropdown-option').forEach(function(opt) {
+        opt.addEventListener('click', function() {
+          if (this.getAttribute('data-value') === 'Owned') {
+            window.__ownershipOwnedClickCount++;
+            window.__ownershipSelectedAfterDetailsActivation =
+              document.getElementById('details-tab-btn').getAttribute('aria-selected') === 'true' &&
+              document.getElementById('details-tab').style.display === 'block' &&
+              document.getElementById('review-tab').style.display === 'none';
+          }
+        });
+      });
+
+      // Opener: Log or review
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        document.getElementById('log-modal').style.display = 'block';
+      });
+
+      // Create Log (never clicked)
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+
+      document.getElementById('delete-log-btn').addEventListener('click', function() {
+        window.__deleteLogClickCount++;
+      });
+
+      // Use Full Editor (never clicked)
+      document.getElementById('full-editor-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.__fullEditorClickCount++;
+      });
+
+      // Status buttons (never clicked)
+      document.querySelectorAll('[data-status]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          window.__statusClickCount++;
+        });
+      });
+
+      // Rating stars (never clicked)
+      document.querySelectorAll('.star').forEach(function(star) {
+        star.addEventListener('click', function() {
+          window.__starClickCount++;
+        });
+      });
+
+      // Review submit (never clicked)
+      document.getElementById('review-submit-btn').addEventListener('click', function() {
+        window.__reviewSubmitClickCount++;
+      });
+
+      // Journal submit (never clicked)
+      document.getElementById('journal-submit-btn').addEventListener('click', function() {
+        window.__journalSubmitClickCount++;
+      });
+
+      // Cancel
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        window.__cancelClickCount++;
+        document.getElementById('log-modal').style.display = 'none';
+      });
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var target = this.getAttribute('data-tab');
+
+          if (target === 'details') {
+            window.__detailsTabClickCount++;
+          }
+
+          // Update tab active states
+          document.querySelectorAll('.tab').forEach(function(t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+
+          // Show/hide tab content
+          document.querySelectorAll('.tab-content').forEach(function(tc) {
+            tc.style.display = tc.getAttribute('data-tab') === target ? 'block' : 'none';
+          });
+        });
+      });
+    </script>
+  </main>
+</body>
+</html>

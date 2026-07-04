@@ -26,6 +26,7 @@
     "import:propose": "node --import dotenv/config dist/cli/proposal-generate.js",
     "import:approve-exact": "node --import dotenv/config dist/cli/proposal-approve.js",
     "import:manifest": "node --import dotenv/config dist/cli/proposal-manifest.js",
+    "backloggd:poc": "node --import dotenv/config dist/cli/backloggd-poc.js",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },
@@ -52,6 +53,7 @@
   "dependencies": {
     "better-sqlite3": "^11.7.0",
     "dotenv": "^16.4.7",
+    "playwright": "^1.49.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

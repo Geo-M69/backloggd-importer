@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Portal</h1>
+    <!-- Only final/save controls visible, no opener and no form controls -->
+    <button type="button" id="save-btn">Save</button>
+    <button type="button" id="submit-btn">Submit</button>
+
+    <script>
+      window.__saveClickCount = 0;
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+      document.getElementById('submit-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

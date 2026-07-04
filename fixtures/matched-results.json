@@ -29,7 +29,7 @@
       "steamAppId": 4000,
       "igdbId": 12348,
       "igdbName": "Garry's Mod",
-      "backloggdSlug": "garrys-mod",
+      "backloggdSlug": "garry-s-mod",
       "confidence": "exact",
       "matchMethod": "steam-appid"
     },

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Counter-Strike 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Counter-Strike 2</h1>
+
+    <section id="library-controls">
+      <label for="platform">Platform</label>
+      <select id="platform" name="platform">
+        <option value="">Select platform...</option>
+        <option value="Steam">Steam</option>
+        <option value="PlayStation">PlayStation</option>
+      </select>
+
+      <label for="ownership_type">Ownership</label>
+      <select id="ownership_type" name="ownership_type">
+        <option value="">Select ownership...</option>
+        <option value="Digital">Digital</option>
+        <option value="Physical">Physical</option>
+      </select>
+
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        <option value="">Select status...</option>
+        <option value="backlog">Backlog</option>
+      </select>
+
+      <button type="button" id="save-btn">Save</button>
+    </section>
+
+    <script>
+      window.__saveClickCount = 0;
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

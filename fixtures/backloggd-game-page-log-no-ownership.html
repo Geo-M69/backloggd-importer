@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BioShock - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>BioShock</h1>
+
+    <!-- Safe opener: "Log or review" -->
+    <button id="log-or-review-btn" data-testid="log-or-review">Log or review</button>
+
+    <!-- Log modal (hidden by default) -->
+    <div id="log-modal" class="modal" style="display: none;" role="dialog" aria-label="Log game">
+      <div class="modal-header">
+        <h2>BioShock (2007)</h2>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="review">Review</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="journal">Journal</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="details" id="details-tab-btn">Details</button>
+      </div>
+
+      <!-- Review tab content (default visible) -->
+      <div class="tab-content" id="review-tab" data-tab="review">
+        <div class="field">
+          <label for="platform">Platform</label>
+          <select id="platform" name="platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+            <option value="PlayStation">PlayStation</option>
+          </select>
+        </div>
+        <!-- No Ownership control -->
+      </div>
+
+      <!-- Journal tab content (hidden) -->
+      <div class="tab-content" id="journal-tab" data-tab="journal" style="display: none;">
+        <p>Journal content</p>
+      </div>
+
+      <!-- Details tab content (hidden, also NO ownership) -->
+      <div class="tab-content" id="details-tab" data-tab="details" style="display: none;">
+        <div class="field">
+          <label for="log-title">Log Title</label>
+          <input id="log-title" name="log_title" value="Log">
+        </div>
+      </div>
+
+      <!-- Final action: Create Log -->
+      <button type="button" id="create-log-btn">Create Log</button>
+
+      <!-- Cancel -->
+      <button type="button" id="cancel-btn">Cancel</button>
+    </div>
+
+    <script>
+      window.__logOrReviewClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__detailsTabClickCount = 0;
+
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+        document.getElementById('log-modal').style.display = 'block';
+      });
+
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        document.getElementById('log-modal').style.display = 'none';
+      });
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          var targetThis = this.getAttribute('data-tab');
+          if (targetThis === 'details') {
+            window.__detailsTabClickCount++;
+          }
+          document.querySelectorAll('.tab').forEach(function(t) {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+          document.querySelectorAll('.tab-content').forEach(function(tc) {
+            tc.style.display = tc.getAttribute('data-tab') === targetThis ? 'block' : 'none';
+          });
+        });
+      });
+    </script>
+  </main>
+</body>
+</html>

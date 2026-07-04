@@ -57,17 +57,41 @@ export interface MatchRunStats {
 }
 
 // ---------------------------------------------------------------------------
+// Backloggd slug overrides
+// ---------------------------------------------------------------------------
+
+/**
+ * Known Backloggd slug overrides for IGDB slugs that diverge.
+ *
+ * IGDB and Backloggd may normalise game titles differently when building
+ * URL slugs (e.g. apostrophe handling).  This map provides manual
+ * corrections for known divergences so that the importer does not
+ * synthesise a false Backloggd URL from the IGDB slug alone.
+ *
+ * When adding an override, use the IGDB slug as the key and the correct
+ * Backloggd slug as the value.
+ */
+const BACKLOGGD_SLUG_OVERRIDES: Record<string, string> = {
+  'garrys-mod': 'garry-s-mod',
+};
+
+// ---------------------------------------------------------------------------
 // Core matching logic
 // ---------------------------------------------------------------------------
 
 /**
  * Build a Backloggd game URL slug from an IGDB slug.
  *
- * Backloggd uses the same slug format as IGDB for game pages:
- *   https://www.backloggd.com/games/<slug>/
+ * Checks known overrides first, then falls back to the raw IGDB slug.
+ * Backloggd generally uses IGDB-compatible slugs, but there are known
+ * divergences (e.g. Garry's Mod).
+ *
+ * @returns The Backloggd slug, or an empty string when the IGDB slug is
+ *          empty (callers should treat an empty result as unresolved).
  */
-function buildBackloggdSlug(igdbSlug: string): string {
-  return igdbSlug;
+export function buildBackloggdSlug(igdbSlug: string): string {
+  if (!igdbSlug) return '';
+  return BACKLOGGD_SLUG_OVERRIDES[igdbSlug] ?? igdbSlug;
 }
 
 /**

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Half-Life 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Half-Life 2</h1>
+
+    <!-- Safe opener that triggers a POST request when clicked -->
+    <button id="add-to-library-btn">Add to Library</button>
+
+    <div id="library-modal" class="modal" style="display: none;" role="dialog" aria-label="Edit Library">
+      <div class="modal-content">
+        <label for="platform">Platform</label>
+        <select id="platform" name="platform">
+          <option value="">Select platform...</option>
+          <option value="Steam">Steam</option>
+        </select>
+        <label for="ownership_type">Ownership</label>
+        <select id="ownership_type" name="ownership_type">
+          <option value="">Select ownership...</option>
+          <option value="Digital">Digital</option>
+        </select>
+        <button type="button" id="save-btn">Save</button>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById('add-to-library-btn').addEventListener('click', async function() {
+        // Triggers a POST that will be blocked by write guard
+        try {
+          await fetch('https://backloggd.com/api/library/', { method: 'POST' });
+        } catch {
+          // expected to fail
+        }
+        // Still show the modal
+        document.getElementById('library-modal').style.display = 'block';
+      });
+    </script>
+  </main>
+</body>
+</html>

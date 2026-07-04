@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Forbidden Aria Log or Review - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Forbidden Aria Game</h1>
+
+    <!-- Log or review opener with deceptive aria-label containing a
+         forbidden final-action term.  Visible text looks safe, but the
+         accessible name (aria-label) contains "Save" which must cause
+         the opener to be rejected. -->
+    <button id="log-or-review-btn" data-testid="log-or-review"
+            aria-label="Save">Log or review</button>
+
+    <script>
+      window.__logOrReviewClickCount = 0;
+
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        window.__logOrReviewClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Skyrim - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Skyrim</h1>
+
+    <!-- The button's visible text is "Add to Library" and aria-labelledby
+         points to an element with the same safe phrase.  The computed
+         accessible name is "Add to Library".  This is a legitimate opener. -->
+    <button id="legitimate-opener" aria-labelledby="ok-ref">Add to Library</button>
+    <span id="ok-ref" style="display:none">Add to Library</span>
+
+    <div id="library-modal" class="modal" style="display: none;" role="dialog" aria-label="Edit Library">
+      <div class="modal-content">
+        <label for="platform">Platform</label>
+        <select id="platform" name="platform">
+          <option value="">Select platform...</option>
+          <option value="Steam">Steam</option>
+        </select>
+        <label for="ownership_type">Ownership</label>
+        <select id="ownership_type" name="ownership_type">
+          <option value="">Select ownership...</option>
+          <option value="Digital">Digital</option>
+        </select>
+        <button type="button" id="save-btn">Save</button>
+      </div>
+    </div>
+
+    <script>
+      window.__saveClickCount = 0;
+      window.__openerClickCount = 0;
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+      document.getElementById('legitimate-opener').addEventListener('click', function() {
+        window.__openerClickCount++;
+        document.getElementById('library-modal').style.display = 'block';
+      });
+    </script>
+  </main>
+</body>
+</html>

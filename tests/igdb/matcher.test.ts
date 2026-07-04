@@ -7,6 +7,7 @@ import {
   matchGames,
   groupByAppId,
   classifyConfidence,
+  buildBackloggdSlug,
 } from '../../src/igdb/matcher.js';
 import { processAndStoreGames } from '../../src/steam/normalize.js';
 import type { RawSteamResponse } from '../../src/steam/client.js';
@@ -96,6 +97,36 @@ describe('IGDB matcher', () => {
       expect(result.confidence).toBe('ambiguous');
       // Should pick the first entry's details
       expect(result.igdbId).toBe(100);
+    });
+  });
+
+  describe('buildBackloggdSlug', () => {
+    it('returns override slug for known IGDB/Backloggd divergence', () => {
+      // Garry's Mod: IGDB slug is 'garrys-mod', Backloggd slug is 'garry-s-mod'
+      expect(buildBackloggdSlug('garrys-mod')).toBe('garry-s-mod');
+    });
+
+    it('returns IGDB slug unchanged when no override exists', () => {
+      expect(buildBackloggdSlug('counter-strike-2')).toBe('counter-strike-2');
+      expect(buildBackloggdSlug('team-fortress-2')).toBe('team-fortress-2');
+      expect(buildBackloggdSlug('dota-2')).toBe('dota-2');
+    });
+
+    it('returns empty string for empty input', () => {
+      expect(buildBackloggdSlug('')).toBe('');
+    });
+
+    it("is used by classifyConfidence for Garry's Mod IGDB entry", () => {
+      const entries = [
+        {
+          uid: '4000',
+          external_game_source: 1,
+          game: { id: 12348, name: "Garry's Mod", slug: 'garrys-mod' },
+        },
+      ];
+
+      const result = classifyConfidence(entries, 4000);
+      expect(result.backloggdSlug).toBe('garry-s-mod');
     });
   });
 
@@ -235,8 +266,15 @@ describe('IGDB matcher', () => {
 
       // Verify matches in DB
       const matches = db
-        .prepare('SELECT steam_app_id, igdb_id, confidence FROM matches ORDER BY steam_app_id')
-        .all() as { steam_app_id: number; igdb_id: number | null; confidence: string }[];
+        .prepare(
+          'SELECT steam_app_id, igdb_id, backloggd_slug, confidence FROM matches ORDER BY steam_app_id',
+        )
+        .all() as {
+        steam_app_id: number;
+        igdb_id: number | null;
+        backloggd_slug: string | null;
+        confidence: string;
+      }[];
 
       expect(matches).toHaveLength(5);
 
@@ -244,11 +282,19 @@ describe('IGDB matcher', () => {
       const cs2 = matches.find((m) => m.steam_app_id === 730);
       expect(cs2?.igdb_id).toBe(12345);
       expect(cs2?.confidence).toBe('exact');
+      expect(cs2?.backloggd_slug).toBe('counter-strike-2');
+
+      // Garry's Mod should have the correct Backloggd slug, not the IGDB slug
+      const gmod = matches.find((m) => m.steam_app_id === 4000);
+      expect(gmod?.igdb_id).toBe(12348);
+      expect(gmod?.backloggd_slug).toBe('garry-s-mod');
+      expect(gmod?.backloggd_slug).not.toBe('garrys-mod');
 
       // Unknown Test App should be unmatched
       const unknown = matches.find((m) => m.steam_app_id === 999999);
       expect(unknown?.igdb_id).toBeNull();
       expect(unknown?.confidence).toBe('unmatched');
+      expect(unknown?.backloggd_slug).toBeNull();
     });
 
     it('is idempotent — running twice produces the same matches', async () => {

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Portal 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Portal 2</h1>
+    <!-- Compound opener: text contains both opener phrase and forbidden "Save" -->
+    <button id="compound-btn">Add to Library and Save</button>
+
+    <script>
+      window.__compoundClickCount = 0;
+      document.getElementById('compound-btn').addEventListener('click', function() {
+        window.__compoundClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

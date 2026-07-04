@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Details No-op Game - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Details No-op Game</h1>
+
+    <button id="log-or-review-btn">Log or review</button>
+
+    <div id="log-modal" style="display: none;" role="dialog" aria-label="Log game">
+      <div class="tabs">
+        <button class="tab active" aria-selected="true" data-tab="review">Review</button>
+        <button class="tab" aria-selected="false" data-tab="journal">Journal</button>
+        <div class="tab" aria-selected="false" data-tab="details" id="details-tab-btn" tabindex="0">Details</div>
+      </div>
+
+      <div class="tab-content" id="review-tab" data-tab="review">
+        <p>Write your review here...</p>
+      </div>
+
+      <div class="tab-content" id="journal-tab" data-tab="journal" style="display: none;">
+        <p>Journal content</p>
+      </div>
+
+      <div class="tab-content" id="details-tab" data-tab="details" style="display: none;">
+        <label>Played on</label>
+        <div id="played-on-trigger">Select platform...</div>
+        <label>Ownership</label>
+        <div data-field="ownership">
+          <div class="dropdown-trigger" role="combobox" aria-label="Ownership">Select ownership...</div>
+          <div class="dropdown-option" data-value="Owned">Owned</div>
+        </div>
+      </div>
+
+      <button id="create-log-btn">Create Log</button>
+    </div>
+
+    <script>
+      window.__detailsTabClickCount = 0;
+      window.__ownershipClickCount = 0;
+      window.__createLogClickCount = 0;
+
+      document.getElementById('log-or-review-btn').addEventListener('click', function() {
+        document.getElementById('log-modal').style.display = 'block';
+      });
+
+      document.getElementById('details-tab-btn').addEventListener('click', function() {
+        window.__detailsTabClickCount++;
+        // Deliberately leave Review active and Details hidden.
+      });
+
+      document.querySelector('[data-field="ownership"]').addEventListener('click', function() {
+        window.__ownershipClickCount++;
+      });
+
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

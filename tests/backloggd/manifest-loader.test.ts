@@ -7,7 +7,7 @@ import type { ImportManifest } from '../../src/review/manifest.js';
 
 function makeValidManifest(): ImportManifest {
   return {
-    manifestVersion: '1.0.0',
+    manifestVersion: '2.0.0',
     generatedAt: new Date().toISOString(),
     sessionId: 'test-session-123',
     policy: null,
@@ -28,6 +28,7 @@ function makeValidManifest(): ImportManifest {
         matchConfidence: 'exact',
         approvedProposals: [
           {
+            proposalId: 'test-proposal-1',
             kind: 'ownership',
             payload: { platform: 'steam', ownershipType: 'digital' },
           },
@@ -73,14 +74,18 @@ describe('manifest-loader', () => {
 
   it('throws ManifestValidationError for missing required fields', async () => {
     const path = join(tempDir, 'incomplete.json');
-    await writeFile(path, JSON.stringify({ manifestVersion: '1.0.0' }), 'utf-8');
+    await writeFile(path, JSON.stringify({ manifestVersion: '2.0.0' }), 'utf-8');
     await expect(loadManifest(path)).rejects.toThrow(ManifestValidationError);
   });
 
   it('throws ManifestValidationError for invalid item structure', async () => {
     const manifest = makeValidManifest();
     manifest.items[0].approvedProposals = [
-      { kind: 'ownership', payload: 'not-an-object' as unknown as Record<string, unknown> },
+      {
+        proposalId: 'test-proposal-bad',
+        kind: 'ownership',
+        payload: 'not-an-object' as unknown as Record<string, unknown>,
+      },
     ];
     const path = join(tempDir, 'bad-payload.json');
     await writeFile(path, JSON.stringify(manifest), 'utf-8');

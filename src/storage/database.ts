@@ -284,11 +284,287 @@ export function runMigrations(db: Database.Database): void {
     }
   }
 
+  // -----------------------------------------------------------------------
+  // Migration 5: Create / repair import_items table (Phase 5A)
+  //
+  // Phase 5A audit-fix: any partial import_items table is rebuilt into the
+  // canonical schema. Valid legacy rows are copied/backfilled; uncopyable rows
+  // are quarantined outside the live queue.
+  // -----------------------------------------------------------------------
+  const REQUIRED_ITEM_COLS = [
+    'proposal_id',
+    'import_session_id',
+    'steam_app_id',
+    'proposal_kind',
+    'frozen_payload',
+    'status',
+    'attempt_count',
+    'outcome_reason',
+    'last_error',
+    'last_attempt_at',
+    'verified_at',
+    'created_at',
+    'updated_at',
+  ];
+
+  const createCanonicalImportItems = (): void => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS import_items (
+        proposal_id         TEXT    NOT NULL PRIMARY KEY,
+        import_session_id   TEXT    NOT NULL,
+        steam_app_id        INTEGER NOT NULL,
+        proposal_kind       TEXT    NOT NULL CHECK (proposal_kind IN ('ownership', 'status', 'playlog')),
+        frozen_payload      TEXT,
+        status              TEXT    NOT NULL DEFAULT 'approved' CHECK (status IN ('approved', 'importing', 'saved', 'skipped', 'failed')),
+        attempt_count       INTEGER NOT NULL DEFAULT 0 CHECK (typeof(attempt_count) = 'integer' AND attempt_count >= 0),
+        outcome_reason      TEXT,
+        last_error          TEXT,
+        last_attempt_at     TEXT,
+        verified_at         TEXT,
+        created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        FOREIGN KEY (proposal_id) REFERENCES proposals(id),
+        FOREIGN KEY (import_session_id) REFERENCES import_sessions(id),
+        FOREIGN KEY (steam_app_id) REFERENCES games(app_id)
+      );
+    `);
+  };
+
+  const hasImportItems = !!db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='import_items'")
+    .get();
+
+  const isImportItemsCanonical = (): boolean => {
+    const createSqlRow = db
+      .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='import_items'")
+      .get() as { sql: string } | undefined;
+    if (!createSqlRow?.sql) return false;
+
+    const itemCols = (db.pragma('table_info(import_items)') as { name: string }[]).map(
+      (col) => col.name,
+    );
+    const existingCols = new Set(itemCols);
+    if (REQUIRED_ITEM_COLS.some((c) => !existingCols.has(c))) return false;
+
+    const tableInfo = db.pragma('table_info(import_items)') as {
+      name: string;
+      notnull: number;
+      pk: number;
+      dflt_value: string | null;
+    }[];
+    const byName = new Map(tableInfo.map((col) => [col.name, col]));
+    if (byName.get('proposal_id')?.pk !== 1) return false;
+    for (const col of [
+      'proposal_id',
+      'import_session_id',
+      'steam_app_id',
+      'proposal_kind',
+      'status',
+      'attempt_count',
+      'created_at',
+      'updated_at',
+    ]) {
+      if (byName.get(col)?.notnull !== 1) return false;
+    }
+
+    const fkRows = db.pragma('foreign_key_list(import_items)') as {
+      from: string;
+      table: string;
+      to: string;
+    }[];
+    const hasFk = (from: string, table: string, to: string) =>
+      fkRows.some((fk) => fk.from === from && fk.table === table && fk.to === to);
+    if (!hasFk('proposal_id', 'proposals', 'id')) return false;
+    if (!hasFk('import_session_id', 'import_sessions', 'id')) return false;
+    if (!hasFk('steam_app_id', 'games', 'app_id')) return false;
+
+    const normalizedSql = createSqlRow.sql.replace(/\s+/g, ' ').toLowerCase();
+    return (
+      normalizedSql.includes("proposal_kind in ('ownership', 'status', 'playlog')") &&
+      normalizedSql.includes("status in ('approved', 'importing', 'saved', 'skipped', 'failed')") &&
+      normalizedSql.includes('typeof(attempt_count) =') &&
+      normalizedSql.includes('attempt_count >= 0') &&
+      normalizedSql.includes("default 'approved'") &&
+      normalizedSql.includes('default 0')
+    );
+  };
+
+  const legacyValue = (legacyCols: Set<string>, col: string, fallback: string): string =>
+    legacyCols.has(col) ? `l.${col}` : fallback;
+
+  const legacyTextValue = (legacyCols: Set<string>, col: string): string =>
+    legacyValue(legacyCols, col, 'NULL');
+
+  const rebuildImportItemsFromLegacy = db.transaction(() => {
+    const legacyTable = 'import_items_legacy_migration';
+    db.exec(`DROP TABLE IF EXISTS ${legacyTable}`);
+    db.exec(`ALTER TABLE import_items RENAME TO ${legacyTable}`);
+    createCanonicalImportItems();
+
+    const legacyRowCount = (
+      db.prepare(`SELECT COUNT(*) AS cnt FROM ${legacyTable}`).get() as { cnt: number }
+    ).cnt;
+    if (legacyRowCount === 0) {
+      db.exec(`DROP TABLE ${legacyTable}`);
+      return;
+    }
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS import_items_legacy_unbackfillable (
+        id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+        legacy_proposal_id        TEXT,
+        legacy_import_session_id  TEXT,
+        legacy_status             TEXT,
+        legacy_attempt_count      INTEGER,
+        legacy_outcome_reason     TEXT,
+        legacy_last_error         TEXT,
+        legacy_last_attempt_at    TEXT,
+        legacy_verified_at        TEXT,
+        legacy_created_at         TEXT,
+        legacy_updated_at         TEXT,
+        reason                    TEXT NOT NULL,
+        quarantined_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      )
+    `);
+
+    const legacyCols = new Set(
+      (db.pragma(`table_info(${legacyTable})`) as { name: string }[]).map((col) => col.name),
+    );
+    const sessionExpr = 'p.import_session_id';
+    const rawStatusExpr = legacyValue(legacyCols, 'status', "'approved'");
+    const normalizedStatusExpr = `
+      CASE
+        WHEN ${rawStatusExpr} IN ('approved', 'importing', 'saved', 'skipped', 'failed')
+          THEN ${rawStatusExpr}
+        ELSE 'failed'
+      END
+    `;
+    const outcomeExpr = `
+      CASE
+        WHEN ${rawStatusExpr} IN ('approved', 'importing', 'saved', 'skipped', 'failed')
+          THEN ${legacyTextValue(legacyCols, 'outcome_reason')}
+        ELSE COALESCE(
+          CASE
+            WHEN ${legacyTextValue(legacyCols, 'outcome_reason')} IS NULL
+              OR ${legacyTextValue(legacyCols, 'outcome_reason')} = ''
+              THEN NULL
+            ELSE ${legacyTextValue(legacyCols, 'outcome_reason')} || '; '
+          END,
+          ''
+        ) || 'legacy-invalid-status'
+      END
+    `;
+    const attemptExpr = legacyCols.has('attempt_count')
+      ? "CASE WHEN typeof(l.attempt_count) = 'integer' AND l.attempt_count >= 0 THEN l.attempt_count ELSE 0 END"
+      : '0';
+    const createdAtExpr = legacyCols.has('created_at')
+      ? "COALESCE(NULLIF(l.created_at, ''), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+      : "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+    const updatedAtExpr = legacyCols.has('updated_at')
+      ? "COALESCE(NULLIF(l.updated_at, ''), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+      : "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
+
+    db.exec(`
+      INSERT INTO import_items_legacy_unbackfillable (
+        legacy_proposal_id, legacy_import_session_id, legacy_status,
+        legacy_attempt_count, legacy_outcome_reason, legacy_last_error,
+        legacy_last_attempt_at, legacy_verified_at, legacy_created_at,
+        legacy_updated_at, reason
+      )
+      SELECT
+        l.proposal_id,
+        ${legacyTextValue(legacyCols, 'import_session_id')},
+        ${legacyTextValue(legacyCols, 'status')},
+        ${legacyValue(legacyCols, 'attempt_count', 'NULL')},
+        ${legacyTextValue(legacyCols, 'outcome_reason')},
+        ${legacyTextValue(legacyCols, 'last_error')},
+        ${legacyTextValue(legacyCols, 'last_attempt_at')},
+        ${legacyTextValue(legacyCols, 'verified_at')},
+        ${legacyTextValue(legacyCols, 'created_at')},
+        ${legacyTextValue(legacyCols, 'updated_at')},
+        CASE
+          WHEN p.id IS NULL THEN 'missing-proposal'
+          WHEN s.id IS NULL THEN 'missing-session'
+          WHEN g.app_id IS NULL THEN 'missing-game'
+          WHEN p.proposal_kind NOT IN ('ownership', 'status', 'playlog') THEN 'invalid-proposal-kind'
+          ELSE 'unknown'
+        END
+      FROM ${legacyTable} l
+      LEFT JOIN proposals p ON p.id = l.proposal_id
+      LEFT JOIN import_sessions s ON s.id = ${sessionExpr}
+      LEFT JOIN games g ON g.app_id = p.steam_app_id
+      WHERE p.id IS NULL
+         OR s.id IS NULL
+         OR g.app_id IS NULL
+         OR p.proposal_kind NOT IN ('ownership', 'status', 'playlog')
+    `);
+
+    db.exec(`
+      INSERT INTO import_items (
+        proposal_id, import_session_id, steam_app_id, proposal_kind,
+        frozen_payload, status, attempt_count, outcome_reason, last_error,
+        last_attempt_at, verified_at, created_at, updated_at
+      )
+      SELECT
+        l.proposal_id,
+        ${sessionExpr},
+        p.steam_app_id,
+        p.proposal_kind,
+        p.suggested_payload,
+        ${normalizedStatusExpr},
+        ${attemptExpr},
+        ${outcomeExpr},
+        ${legacyTextValue(legacyCols, 'last_error')},
+        ${legacyTextValue(legacyCols, 'last_attempt_at')},
+        ${legacyTextValue(legacyCols, 'verified_at')},
+        ${createdAtExpr},
+        ${updatedAtExpr}
+      FROM ${legacyTable} l
+      JOIN proposals p ON p.id = l.proposal_id
+      JOIN import_sessions s ON s.id = ${sessionExpr}
+      JOIN games g ON g.app_id = p.steam_app_id
+      WHERE p.proposal_kind IN ('ownership', 'status', 'playlog')
+    `);
+
+    db.exec(`DROP TABLE ${legacyTable}`);
+  });
+
+  if (!hasImportItems) {
+    createCanonicalImportItems();
+  } else if (!isImportItemsCanonical()) {
+    rebuildImportItemsFromLegacy();
+  }
+
+  const hasCanonicalImportItems = !!db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='import_items'")
+    .get();
+
+  // Migration 6: add pause_reason column to import_sessions (Phase 5A)
+  if (hasImportSessions) {
+    const sessionCols2 = (db.pragma('table_info(import_sessions)') as { name: string }[]).map(
+      (col) => col.name,
+    );
+    if (!sessionCols2.includes('pause_reason')) {
+      db.exec('ALTER TABLE import_sessions ADD COLUMN pause_reason TEXT');
+    }
+  }
+
   // Final step: ensure all indexes exist regardless of migration history.
   if (hasProposalsTable) {
     db.exec(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_proposals_session_kind ON proposals(import_session_id, steam_app_id, proposal_kind)',
     );
+  }
+
+  // Ensure import_items indexes exist.
+  if (hasCanonicalImportItems) {
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_import_items_session_status ON import_items(import_session_id, status)',
+    );
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_import_items_session_app ON import_items(import_session_id, steam_app_id)',
+    );
+    db.exec('CREATE INDEX IF NOT EXISTS idx_import_items_status ON import_items(status)');
   }
 }
 

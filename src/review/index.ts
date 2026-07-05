@@ -9,12 +9,13 @@ export type { GenerateResult, GenerateOptions } from './generator.js';
 export { approveExactMatches } from './approver.js';
 export type { ApproveResult } from './approver.js';
 
-export { buildManifest } from './manifest.js';
+export { buildManifest, MANIFEST_VERSION, verifyManifestProposal } from './manifest.js';
 export type {
   ImportManifest,
   ManifestSummary,
   ManifestItem,
   ManifestApprovedProposal,
+  DriftCheckResult,
 } from './manifest.js';
 
 export {

@@ -96,4 +96,33 @@ export type {
   ManifestSummary,
   ManifestItem,
   ManifestApprovedProposal,
+  DriftCheckResult,
+  MANIFEST_VERSION,
 } from './review/index.js';
+
+// -- Importer module ------------------------------------------------------
+
+export {
+  getItem,
+  getItemsBySession,
+  seedApprovedManifest,
+  selectNextItem,
+  reconcileImportingItems,
+  transitionItem,
+  recalculateSessionCounters,
+  getItemCounts,
+  resetFailedForRetry,
+  resetFailedItemForRetry,
+  validateManifestVersion,
+  validateManifestAgainstDb,
+  IllegalTransitionError,
+  ManifestDriftError,
+} from './importer/index.js';
+
+export type {
+  ImportItemStatus,
+  ImportItem,
+  SeedResult,
+  SelectOptions,
+  ItemCounts,
+} from './importer/index.js';

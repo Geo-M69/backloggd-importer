@@ -4,7 +4,7 @@ import type { ImportManifest } from '../../src/review/manifest.js';
 
 function makeManifest(items: ImportManifest['items']): ImportManifest {
   return {
-    manifestVersion: '1.0.0',
+    manifestVersion: '2.0.0',
     generatedAt: new Date().toISOString(),
     sessionId: 'test-session',
     policy: null,
@@ -37,6 +37,7 @@ function makeItem(
     matchConfidence: confidence,
     approvedProposals: [
       {
+        proposalId: `proposal-${appId}-ownership`,
         kind: 'ownership',
         payload: { platform: 'steam', ownershipType: 'digital' },
       },
@@ -52,7 +53,9 @@ describe('item-selector', () => {
       { ...makeItem(440, 'exact'), backloggdUrl: null },
       {
         ...makeItem(570, 'exact'),
-        approvedProposals: [{ kind: 'status', payload: { suggestion: 'played' } }],
+        approvedProposals: [
+          { proposalId: 'proposal-570-status', kind: 'status', payload: { suggestion: 'played' } },
+        ],
       },
     ]);
 
@@ -101,7 +104,11 @@ describe('item-selector', () => {
       {
         ...makeItem(730, 'exact'),
         approvedProposals: [
-          { kind: 'ownership', payload: { platform: 'steam', ownershipType: 'physical' } },
+          {
+            proposalId: 'proposal-730-physical',
+            kind: 'ownership',
+            payload: { platform: 'steam', ownershipType: 'physical' },
+          },
         ],
       },
     ]);
@@ -114,7 +121,11 @@ describe('item-selector', () => {
       {
         ...makeItem(730, 'exact'),
         approvedProposals: [
-          { kind: 'ownership', payload: { platform: 'playstation', ownershipType: 'digital' } },
+          {
+            proposalId: 'proposal-730-playstation',
+            kind: 'ownership',
+            payload: { platform: 'playstation', ownershipType: 'digital' },
+          },
         ],
       },
     ]);

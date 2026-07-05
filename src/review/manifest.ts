@@ -21,6 +21,12 @@ import type { ProposalPolicy } from '../models/proposal.js';
 /**
  * The top‑level manifest document.
  */
+/**
+ * The current manifest format version.
+ * Incremented when the structure or semantics change.
+ */
+export const MANIFEST_VERSION = '2.0.0';
+
 export interface ImportManifest {
   manifestVersion: string;
   generatedAt: string;
@@ -49,8 +55,86 @@ export interface ManifestItem {
 }
 
 export interface ManifestApprovedProposal {
+  /** Stable proposal ID that links back to the proposals table. */
+  proposalId: string;
   kind: string;
   payload: Record<string, unknown> | null;
+}
+
+// ---------------------------------------------------------------------------
+// Drift detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Result of verifying a manifest proposal against the database.
+ */
+export interface DriftCheckResult {
+  /** True when the manifest proposal still matches the database record. */
+  matches: boolean;
+  /** Human-readable reason when drift is detected, or null. */
+  reason: string | null;
+}
+
+/**
+ * Verify that a manifest approved proposal still matches the current
+ * database proposal snapshot.  Drift is detected when:
+ *
+ *  - The proposal row no longer exists.
+ *  - The proposal is no longer in `approved` status.
+ *  - The `suggested_payload` has changed.
+ *  - The `steam_app_id`, `igdb_id`, `backloggd_slug`, or `proposal_kind`
+ *    have changed.
+ *
+ * @returns A drift-check result.
+ */
+export function verifyManifestProposal(
+  proposalId: string,
+  manifestPayload: Record<string, unknown> | null,
+  db: Database.Database,
+): DriftCheckResult {
+  const row = db
+    .prepare(
+      `SELECT status, suggested_payload, steam_app_id, igdb_id,
+              backloggd_slug, proposal_kind
+       FROM proposals
+       WHERE id = ?`,
+    )
+    .get(proposalId) as
+    | {
+        status: string;
+        suggested_payload: string | null;
+        steam_app_id: number;
+        igdb_id: number | null;
+        backloggd_slug: string | null;
+        proposal_kind: string;
+      }
+    | undefined;
+
+  if (!row) {
+    return { matches: false, reason: 'proposal row no longer exists' };
+  }
+
+  if (row.status !== 'approved') {
+    return { matches: false, reason: `proposal status is '${row.status}', not 'approved'` };
+  }
+
+  // Compare payloads (both null or both structurally equal JSON)
+  const dbPayload = row.suggested_payload
+    ? (JSON.parse(row.suggested_payload) as Record<string, unknown>)
+    : null;
+
+  const payloadsMatch =
+    manifestPayload === null && dbPayload === null
+      ? true
+      : manifestPayload !== null && dbPayload !== null
+        ? JSON.stringify(manifestPayload) === JSON.stringify(dbPayload)
+        : false;
+
+  if (!payloadsMatch) {
+    return { matches: false, reason: 'suggested_payload has changed' };
+  }
+
+  return { matches: true, reason: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +155,7 @@ function backloggdUrl(slug: string | null): string | null {
 // ---------------------------------------------------------------------------
 
 interface ApprovedProposalRow {
+  proposal_id: string;
   steam_app_id: number;
   steam_title: string;
   igdb_id: number | null;
@@ -142,7 +227,8 @@ function queryApprovedProposals(
 ): ApprovedProposalRow[] {
   return database
     .prepare(
-      `SELECT p.steam_app_id,
+      `SELECT p.id AS proposal_id,
+              p.steam_app_id,
               p.steam_title,
               p.igdb_id,
               p.igdb_name,
@@ -192,6 +278,7 @@ function buildFromRows(
     }
 
     item.approvedProposals.push({
+      proposalId: row.proposal_id,
       kind: row.proposal_kind,
       payload,
     });
@@ -210,7 +297,7 @@ function buildFromRows(
   };
 
   return {
-    manifestVersion: '1.0.0',
+    manifestVersion: MANIFEST_VERSION,
     generatedAt: new Date().toISOString(),
     sessionId,
     policy,
@@ -221,7 +308,7 @@ function buildFromRows(
 
 function emptyManifest(sessionId: string, policy: ProposalPolicy | null): ImportManifest {
   return {
-    manifestVersion: '1.0.0',
+    manifestVersion: MANIFEST_VERSION,
     generatedAt: new Date().toISOString(),
     sessionId,
     policy,

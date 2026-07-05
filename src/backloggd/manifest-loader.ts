@@ -9,6 +9,7 @@ import { z } from 'zod';
 import type { ImportManifest } from '../review/manifest.js';
 
 const manifestApprovedProposalSchema = z.object({
+  proposalId: z.string(),
   kind: z.string(),
   payload: z.record(z.unknown()).nullable(),
 });

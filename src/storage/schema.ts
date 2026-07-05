@@ -81,5 +81,28 @@ export function getCreateTableSQL(): string {
     CREATE INDEX IF NOT EXISTS idx_proposals_session ON proposals(import_session_id);
     CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
     CREATE INDEX IF NOT EXISTS idx_proposals_confidence ON proposals(match_confidence);
+
+    CREATE TABLE IF NOT EXISTS import_items (
+      proposal_id         TEXT    NOT NULL PRIMARY KEY,
+      import_session_id   TEXT    NOT NULL,
+      steam_app_id        INTEGER NOT NULL,
+      proposal_kind       TEXT    NOT NULL CHECK (proposal_kind IN ('ownership', 'status', 'playlog')),
+      frozen_payload      TEXT,
+      status              TEXT    NOT NULL DEFAULT 'approved' CHECK (status IN ('approved', 'importing', 'saved', 'skipped', 'failed')),
+      attempt_count       INTEGER NOT NULL DEFAULT 0 CHECK (typeof(attempt_count) = 'integer' AND attempt_count >= 0),
+      outcome_reason      TEXT,
+      last_error          TEXT,
+      last_attempt_at     TEXT,
+      verified_at         TEXT,
+      created_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      updated_at          TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      FOREIGN KEY (proposal_id) REFERENCES proposals(id),
+      FOREIGN KEY (import_session_id) REFERENCES import_sessions(id),
+      FOREIGN KEY (steam_app_id) REFERENCES games(app_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_import_items_session_status ON import_items(import_session_id, status);
+    CREATE INDEX IF NOT EXISTS idx_import_items_session_app ON import_items(import_session_id, steam_app_id);
+    CREATE INDEX IF NOT EXISTS idx_import_items_status ON import_items(status);
   `;
 }

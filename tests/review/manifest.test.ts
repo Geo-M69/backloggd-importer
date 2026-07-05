@@ -76,7 +76,7 @@ describe('manifest export', () => {
 
       const manifest = buildManifest(undefined, db);
 
-      expect(manifest.manifestVersion).toBe('1.0.0');
+      expect(manifest.manifestVersion).toBe('2.0.0');
       expect(manifest.summary.totalApproved).toBe(2);
 
       expect(manifest.items).toHaveLength(2);
@@ -93,6 +93,9 @@ describe('manifest export', () => {
         platform: 'steam',
         ownershipType: 'digital',
       });
+      // proposalId is a UUID — just verify it's present and non-empty
+      expect(cs2?.approvedProposals[0]?.proposalId).toBeTruthy();
+      expect(typeof cs2?.approvedProposals[0]?.proposalId).toBe('string');
     });
 
     it('excludes unapproved proposals', () => {
@@ -132,7 +135,7 @@ describe('manifest export', () => {
     it('returns empty manifest when there are no proposals', () => {
       const manifest = buildManifest(undefined, db);
 
-      expect(manifest.manifestVersion).toBe('1.0.0');
+      expect(manifest.manifestVersion).toBe('2.0.0');
       expect(manifest.summary.totalApproved).toBe(0);
       expect(manifest.items).toHaveLength(0);
     });
@@ -305,7 +308,7 @@ describe('manifest export', () => {
 
       expect(manifest.items).toHaveLength(0);
       expect(manifest.summary.totalApproved).toBe(0);
-      expect(manifest.manifestVersion).toBe('1.0.0');
+      expect(manifest.manifestVersion).toBe('2.0.0');
     });
 
     it('builds correct backloggdUrl from a known slug', () => {

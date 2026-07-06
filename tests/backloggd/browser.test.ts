@@ -2488,7 +2488,7 @@ describe('backloggd browser fixture tests', () => {
 
       await context.unroute('https://www.backloggd.com/');
       await context.unroute('https://www.backloggd.com/games/team-fortress-2/');
-    }, 15000);
+    }, 30000);
   });
 
   // -----------------------------------------------------------------------

@@ -33,3 +33,10 @@ export type {
 } from './import-items.js';
 
 export { IllegalTransitionError, ManifestDriftError } from './import-items.js';
+
+export { runOwnershipComparison } from './ownership-comparison-runner.js';
+
+export type {
+  OwnershipComparisonRunnerResult,
+  OwnershipComparisonRunnerOptions,
+} from './ownership-comparison-runner.js';

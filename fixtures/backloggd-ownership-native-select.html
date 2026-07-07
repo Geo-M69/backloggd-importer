@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Team Fortress 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Team Fortress 2</h1>
+
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <select data-field="platform" name="platform" aria-label="Platform">
+            <option value="">Select platform...</option>
+            <option value="Steam" selected>Steam</option>
+            <option value="PlayStation">PlayStation</option>
+          </select>
+          <select data-field="ownership" name="ownership" aria-label="Ownership">
+            <option value="">Select ownership...</option>
+            <option value="Digital" selected>Digital</option>
+            <option value="Physical">Physical</option>
+          </select>
+        </li>
+      </ul>
+      <button type="button" data-testid="add-ownership" class="add-ownership">Add Ownership</button>
+    </section>
+  </main>
+</body>
+</html>

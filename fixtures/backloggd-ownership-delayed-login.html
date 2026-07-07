@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Team Fortress 2 - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Team Fortress 2</h1>
+
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">Steam</span>
+          <span data-field="ownership">Digital</span>
+        </li>
+      </ul>
+      <button type="button" data-testid="add-ownership" class="add-ownership">Add Ownership</button>
+    </section>
+
+    <!-- Delayed login cue: hidden at load, appears after 1s. -->
+    <nav>
+      <a id="blocker" href="/signin" style="display: none">Sign In</a>
+    </nav>
+
+    <script>
+      window.__blockerShownAt = 0;
+      setTimeout(function () {
+        document.getElementById('blocker').style.display = 'inline';
+        window.__blockerShownAt = Date.now();
+      }, 800);
+    </script>
+  </main>
+</body>
+</html>

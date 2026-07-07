@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hollow Knight - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Hollow Knight</h1>
+
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">Steam</span>
+          <span data-field="ownership">Digital</span>
+        </li>
+      </ul>
+      <button type="button" data-testid="add-ownership" class="add-ownership">Add Ownership</button>
+    </section>
+
+    <!-- Hidden decoys: must never be read as visible ownership entries. -->
+    <div data-testid="decoy-library" aria-hidden="true" style="display: none;">
+      <ul>
+        <li class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">Steam</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+    </div>
+
+    <div aria-hidden="true" style="visibility: hidden; position: absolute;">
+      <span data-field="platform">Steam Deck</span>
+      <span data-field="ownership">Owned</span>
+    </div>
+  </main>
+</body>
+</html>

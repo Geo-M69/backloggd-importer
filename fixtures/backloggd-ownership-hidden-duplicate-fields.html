@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hollow Knight - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Hollow Knight</h1>
+
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <!-- Hidden duplicate fields must not count as visible duplicates. -->
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">Steam</span>
+          <span data-field="platform" style="display: none">PlayStation</span>
+          <span data-field="ownership">Digital</span>
+          <span data-field="ownership" style="display: none">Physical</span>
+        </li>
+      </ul>
+      <button type="button" data-testid="add-ownership" class="add-ownership">Add Ownership</button>
+    </section>
+  </main>
+</body>
+</html>

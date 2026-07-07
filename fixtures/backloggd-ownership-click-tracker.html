@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Team Fortress 2 - Backloggd</title>
+  <style>
+    .custom-dropdown { position: relative; display: inline-block; min-width: 180px; }
+    .dropdown-trigger {
+      display: flex; align-items: center; justify-content: space-between;
+      border: 1px solid #ccc; padding: 6px 10px; cursor: pointer;
+      background: #fff; border-radius: 4px;
+    }
+    .dropdown-options { display: none; }
+    .dropdown-options.open { display: block; }
+    .dropdown-option { padding: 6px 10px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Team Fortress 2</h1>
+
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">Steam</span>
+          <span data-field="ownership">Digital</span>
+        </li>
+      </ul>
+      <button type="button" data-testid="add-ownership" class="add-ownership">Add Ownership</button>
+    </section>
+
+    <!-- Decoy ownership dropdown (closed). The reader must not click the
+         trigger or any option. -->
+    <div class="field" id="ownership-decoy">
+      <label>Ownership</label>
+      <div class="custom-dropdown">
+        <div class="dropdown-trigger" id="ownership-trigger" role="combobox"
+             aria-label="Ownership" aria-expanded="false" tabindex="0">
+          physical, digital, subscr...
+        </div>
+        <div class="dropdown-options" id="ownership-options" role="listbox">
+          <div class="dropdown-option" role="option" data-value="Owned">Owned</div>
+          <div class="dropdown-option" role="option" data-value="Digital">Digital</div>
+          <div class="dropdown-option" role="option" data-value="Physical">Physical</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decoy platform select. The reader must not change it. -->
+    <div class="field">
+      <label for="decoy-platform">Platform</label>
+      <select id="decoy-platform" name="platform">
+        <option value="">Select platform...</option>
+        <option value="Steam">Steam</option>
+        <option value="PlayStation">PlayStation</option>
+      </select>
+    </div>
+
+    <!-- Decoy status buttons. The reader must not click them. -->
+    <div class="status-buttons">
+      <button type="button" data-status="completed">Completed</button>
+      <button type="button" data-status="playing">Playing</button>
+      <button type="button" data-status="backlog">Backlog</button>
+      <button type="button" data-status="wishlist">Wishlist</button>
+    </div>
+
+    <!-- Decoy final actions. The reader must not click them. -->
+    <button type="button" id="save-btn">Save</button>
+    <button type="button" id="submit-btn">Submit</button>
+    <button type="button" id="create-log-btn">Create Log</button>
+    <button type="button" id="update-btn">Update</button>
+    <button type="button" id="confirm-btn">Confirm</button>
+    <button type="button" id="delete-btn">Delete</button>
+    <button type="button" id="remove-btn">Remove</button>
+    <button type="button" id="add-btn">Add</button>
+    <a href="#" id="full-editor-link">Use Full Editor</a>
+
+    <!-- Decoy rating stars. -->
+    <div class="rating-stars">
+      <span class="star" data-rating="1">★</span>
+      <span class="star" data-rating="2">★</span>
+    </div>
+
+    <!-- Decoy review textarea. -->
+    <textarea id="review-text" placeholder="Write your review..."></textarea>
+
+    <script>
+      window.__saveClickCount = 0;
+      window.__submitClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__updateClickCount = 0;
+      window.__confirmClickCount = 0;
+      window.__deleteClickCount = 0;
+      window.__removeClickCount = 0;
+      window.__addClickCount = 0;
+      window.__fullEditorClickCount = 0;
+      window.__statusClickCount = 0;
+      window.__starClickCount = 0;
+      window.__ownershipTriggerClickCount = 0;
+      window.__ownershipOptionClickCount = 0;
+      window.__platformChangeCount = 0;
+      window.__addOwnershipClickCount = 0;
+      window.__reviewInputCount = 0;
+
+      function bump(key) { window[key] = (window[key] || 0) + 1; }
+
+      document.getElementById('save-btn').addEventListener('click', () => bump('__saveClickCount'));
+      document.getElementById('submit-btn').addEventListener('click', () => bump('__submitClickCount'));
+      document.getElementById('create-log-btn').addEventListener('click', () => bump('__createLogClickCount'));
+      document.getElementById('update-btn').addEventListener('click', () => bump('__updateClickCount'));
+      document.getElementById('confirm-btn').addEventListener('click', () => bump('__confirmClickCount'));
+      document.getElementById('delete-btn').addEventListener('click', () => bump('__deleteClickCount'));
+      document.getElementById('remove-btn').addEventListener('click', () => bump('__removeClickCount'));
+      document.getElementById('add-btn').addEventListener('click', () => bump('__addClickCount'));
+      document.getElementById('full-editor-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        bump('__fullEditorClickCount');
+      });
+      document.getElementById('add-ownership').addEventListener('click', () => bump('__addOwnershipClickCount'));
+
+      document.querySelectorAll('[data-status]').forEach((btn) => {
+        btn.addEventListener('click', () => bump('__statusClickCount'));
+      });
+      document.querySelectorAll('.star').forEach((s) => {
+        s.addEventListener('click', () => bump('__starClickCount'));
+      });
+
+      var trigger = document.getElementById('ownership-trigger');
+      var options = document.getElementById('ownership-options');
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        options.classList.toggle('open');
+        bump('__ownershipTriggerClickCount');
+      });
+      options.querySelectorAll('.dropdown-option').forEach((opt) => {
+        opt.addEventListener('click', () => bump('__ownershipOptionClickCount'));
+      });
+
+      var platformSelect = document.getElementById('decoy-platform');
+      platformSelect.addEventListener('change', () => bump('__platformChangeCount'));
+
+      var review = document.getElementById('review-text');
+      review.addEventListener('input', () => bump('__reviewInputCount'));
+    </script>
+  </main>
+</body>
+</html>

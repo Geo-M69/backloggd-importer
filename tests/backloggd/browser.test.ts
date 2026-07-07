@@ -637,36 +637,56 @@ describe('backloggd browser fixture tests', () => {
 
   describe('render-editor allowance', () => {
     it('allows POST /render-editor/891 during the allowance window', async () => {
-      const page = await openFixture(context, 'backloggd-game-page.html');
-      await installWriteGuard(page);
-
-      const blockedByGuard = new Set<string>();
-      const handler = (req: import('playwright').Request) => {
-        const failure = req.failure();
-        if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
-          blockedByGuard.add(`${req.method()} ${req.url()}`);
-        }
-      };
-      page.on('requestfailed', handler);
-
-      // Enable the render-editor allowance
-      enableRenderEditorAllowance(page);
-
-      // Trigger a POST /render-editor/891
-      await page.evaluate(async () => {
-        try {
-          await fetch('https://backloggd.com/render-editor/891', { method: 'POST' });
-        } catch {
-          // Expected — no real server
-        }
+      // Route the render-editor URL to a local handler so the request never
+      // reaches the real network.  This avoids CORS preflight (OPTIONS) from
+      // a file:// origin, which the write guard would block and cause the
+      // test to fail (the blocked OPTIONS also matches /render-editor/891).
+      await context.route('https://backloggd.com/render-editor/891', async (route) => {
+        await route.fulfill({
+          status: 200,
+          body: '<div>rendered</div>',
+          contentType: 'text/html',
+          headers: { 'access-control-allow-origin': '*' },
+        });
       });
-      await new Promise((r) => setTimeout(r, 500));
 
-      // The request must NOT have been blocked by the guard
-      const blockedForUrl = [...blockedByGuard].some((r) => r.includes('/render-editor/891'));
-      expect(blockedForUrl).toBe(false);
+      try {
+        const page = await openFixture(context, 'backloggd-game-page.html');
+        await installWriteGuard(page);
 
-      await page.close();
+        const blockedByGuard = new Set<string>();
+        const handler = (req: import('playwright').Request) => {
+          const failure = req.failure();
+          if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+            blockedByGuard.add(`${req.method()} ${req.url()}`);
+          }
+        };
+        page.on('requestfailed', handler);
+
+        // Enable the render-editor allowance
+        enableRenderEditorAllowance(page);
+
+        // Trigger a POST /render-editor/891 — the write guard (page-level)
+        // intercepts it first, allows it via route.fallback(), then the
+        // context-level route above fulfills it.  No real network access,
+        // no CORS preflight, no flakiness.
+        await page.evaluate(async () => {
+          try {
+            await fetch('https://backloggd.com/render-editor/891', { method: 'POST' });
+          } catch {
+            // Expected
+          }
+        });
+        await new Promise((r) => setTimeout(r, 500));
+
+        // The request must NOT have been blocked by the guard
+        const blockedForUrl = [...blockedByGuard].some((r) => r.includes('/render-editor/891'));
+        expect(blockedForUrl).toBe(false);
+
+        await page.close();
+      } finally {
+        await context.unroute('https://backloggd.com/render-editor/891');
+      }
     }, 15000);
 
     it('blocks POST /render-editor/891 outside the allowance window', async () => {
@@ -1072,32 +1092,35 @@ describe('backloggd browser fixture tests', () => {
         });
       });
 
-      const page = await context.newPage();
-      await page.goto('https://www.backloggd.com/', {
-        waitUntil: 'domcontentloaded',
-      });
+      try {
+        const page = await context.newPage();
+        await page.goto('https://www.backloggd.com/', {
+          waitUntil: 'domcontentloaded',
+        });
 
-      // Step 1: detect login state → false (login cues visible)
-      const loginState = await detectLoginState(page);
-      expect(loginState).toBe(false);
+        // Step 1: detect login state → false (login cues visible)
+        const loginState = await detectLoginState(page);
+        expect(loginState).toBe(false);
 
-      // Step 2: simulate the post-prompt re-check
-      const diagnostics: DiagnosticEntry[] = [];
-      const loginOk = await checkLoginAfterPrompt(page, 'test-session', diagnostics);
+        // Step 2: simulate the post-prompt re-check
+        const diagnostics: DiagnosticEntry[] = [];
+        const loginOk = await checkLoginAfterPrompt(page, 'test-session', diagnostics);
 
-      expect(loginOk).toBe(false);
+        expect(loginOk).toBe(false);
 
-      // Diagnostics must include signed-out-cue-visible
-      const loginDiag = diagnostics.find((d) => d.step === 'signed-out-cue-visible');
-      expect(loginDiag).toBeDefined();
+        // Diagnostics must include signed-out-cue-visible
+        const loginDiag = diagnostics.find((d) => d.step === 'signed-out-cue-visible');
+        expect(loginDiag).toBeDefined();
 
-      // Verify no item page navigation occurred — the page is still on
-      // the landing page, not a game-page URL.
-      expect(page.url()).toContain('backloggd.com');
-      expect(page.url()).not.toMatch(/\/games\//);
+        // Verify no item page navigation occurred — the page is still on
+        // the landing page, not a game-page URL.
+        expect(page.url()).toContain('backloggd.com');
+        expect(page.url()).not.toMatch(/\/games\//);
 
-      await page.close();
-      await context.unroute('https://www.backloggd.com/');
+        await page.close();
+      } finally {
+        await context.unroute('https://www.backloggd.com/');
+      }
     });
 
     it('runPocSession login-failure returns empty results with signed-out-cue-visible', async () => {
@@ -1109,41 +1132,56 @@ describe('backloggd browser fixture tests', () => {
         });
       });
 
-      // Provide a no-op prompt function so the test does not block on stdin.
-      const options: PocSessionRunOptions = {
-        promptFn: async () => Promise.resolve(),
-      };
+      try {
+        // Provide a no-op prompt function so the test does not block on stdin.
+        const options: PocSessionRunOptions = {
+          promptFn: async () => Promise.resolve(),
+        };
 
-      // Build an item that WOULD navigate to a game page if processing
-      // continued — this proves no processing occurred.
-      const items: SelectedItem[] = [
-        {
-          steamAppId: 730,
-          steamTitle: 'Counter-Strike 2',
-          backloggdUrl: openFixtureUrl('backloggd-game-page-with-modal.html'),
-          backloggdSlug: 'backloggd-game-page-with-modal',
-          matchConfidence: 'exact',
-          ownershipPayload: { platform: 'steam', ownershipType: 'digital' },
-        },
-      ];
+        // Build an item that WOULD navigate to a game page if processing
+        // continued — this proves no processing occurred.
+        const items: SelectedItem[] = [
+          {
+            steamAppId: 730,
+            steamTitle: 'Counter-Strike 2',
+            backloggdUrl: openFixtureUrl('backloggd-game-page-with-modal.html'),
+            backloggdSlug: 'backloggd-game-page-with-modal',
+            matchConfidence: 'exact',
+            ownershipPayload: { platform: 'steam', ownershipType: 'digital' },
+          },
+        ];
 
-      const { results, diagnostics } = await runPocSession(context, items, 'test-session', options);
+        const { results, diagnostics } = await runPocSession(
+          context,
+          items,
+          'test-session',
+          options,
+        );
 
-      // No items should have been processed.
-      expect(results).toHaveLength(0);
+        // No items should have been processed.
+        expect(results).toHaveLength(0);
 
-      // Diagnostics must include the signed-out-cue-visible entry.
-      const loginDiag = diagnostics.find((d) => d.step === 'signed-out-cue-visible');
-      expect(loginDiag).toBeDefined();
+        // Diagnostics must include the signed-out-cue-visible entry.
+        const loginDiag = diagnostics.find((d) => d.step === 'signed-out-cue-visible');
+        expect(loginDiag).toBeDefined();
 
-      // Verify no item-level diagnostics were emitted (no processing occurred).
-      const itemDiags = diagnostics.filter((d) => d.step !== 'signed-out-cue-visible');
-      expect(itemDiags).toHaveLength(0);
-
-      await context.unroute('https://www.backloggd.com/');
+        // Verify no item-level diagnostics were emitted (no processing occurred).
+        const itemDiags = diagnostics.filter((d) => d.step !== 'signed-out-cue-visible');
+        expect(itemDiags).toHaveLength(0);
+      } finally {
+        await context.unroute('https://www.backloggd.com/');
+      }
     });
 
     it('runPocSession proceeds past login check when "+ Log a Game" is visible', async () => {
+      // Clean up any leaked routes from previous tests that may have failed
+      // to clean up.  If a previous test registered a context route for the
+      // same URL and didn't unroute it, Playwright dispatches the LEAST
+      // recently added handler first — the leaked handler would return wrong
+      // HTML and cause this test to fail.
+      await context.unroute('https://www.backloggd.com/');
+      await context.unroute('https://www.backloggd.com/games/counter-strike-2/');
+
       // Route the Backloggd landing page to a fixture with "+ Log a Game" nav link.
       await context.route('https://www.backloggd.com/', async (route) => {
         await route.fulfill({
@@ -1160,35 +1198,42 @@ describe('backloggd browser fixture tests', () => {
         });
       });
 
-      const options: PocSessionRunOptions = {
-        promptFn: async () => Promise.resolve(),
-      };
+      try {
+        const options: PocSessionRunOptions = {
+          promptFn: async () => Promise.resolve(),
+        };
 
-      const items: SelectedItem[] = [
-        {
-          steamAppId: 730,
-          steamTitle: 'Counter-Strike 2',
-          backloggdUrl: 'https://www.backloggd.com/games/counter-strike-2/',
-          backloggdSlug: 'counter-strike-2',
-          matchConfidence: 'exact',
-          ownershipPayload: { platform: 'steam', ownershipType: 'digital' },
-        },
-      ];
+        const items: SelectedItem[] = [
+          {
+            steamAppId: 730,
+            steamTitle: 'Counter-Strike 2',
+            backloggdUrl: 'https://www.backloggd.com/games/counter-strike-2/',
+            backloggdSlug: 'counter-strike-2',
+            matchConfidence: 'exact',
+            ownershipPayload: { platform: 'steam', ownershipType: 'digital' },
+          },
+        ];
 
-      const { results, diagnostics } = await runPocSession(context, items, 'test-session', options);
+        const { results, diagnostics } = await runPocSession(
+          context,
+          items,
+          'test-session',
+          options,
+        );
 
-      // The session should proceed past login and process the item.
-      expect(results.length).toBeGreaterThan(0);
+        // The session should proceed past login and process the item.
+        expect(results.length).toBeGreaterThan(0);
 
-      // No login-check/signed-out/ambiguous diagnostics should be present
-      // because the "+ Log a Game" cue was detected as logged-in.
-      const loginDiags = diagnostics.filter(
-        (d) => d.step === 'signed-out-cue-visible' || d.step === 'ambiguous-login-state',
-      );
-      expect(loginDiags).toHaveLength(0);
-
-      await context.unroute('https://www.backloggd.com/');
-      await context.unroute('https://www.backloggd.com/games/counter-strike-2/');
+        // No login-check/signed-out/ambiguous diagnostics should be present
+        // because the "+ Log a Game" cue was detected as logged-in.
+        const loginDiags = diagnostics.filter(
+          (d) => d.step === 'signed-out-cue-visible' || d.step === 'ambiguous-login-state',
+        );
+        expect(loginDiags).toHaveLength(0);
+      } finally {
+        await context.unroute('https://www.backloggd.com/');
+        await context.unroute('https://www.backloggd.com/games/counter-strike-2/');
+      }
     }, 15000);
 
     it('runPocSession stops when only ambiguous cues are visible', async () => {

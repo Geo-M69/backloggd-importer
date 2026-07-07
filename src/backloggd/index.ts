@@ -28,6 +28,18 @@ export {
   type PocSessionRunOptions,
 } from './browser.js';
 export { readPageState, verifyGamePage, getAttemptedSelectors } from './page-reader.js';
+export { readVisibleBackloggdState, type VisibleBackloggdState } from './visible-state.js';
+export {
+  compareOwnership,
+  normalizeSurfaceText,
+  canonicalizePlatform,
+  canonicalizeOwnership,
+  type OwnershipClassification,
+  type OwnershipProposal,
+  type ComparisonVisibleEntry,
+  type ComparisonLibrarySummary,
+  type ComparisonResult,
+} from './comparison.js';
 export {
   trySelectors,
   trySelectorsInLocator,

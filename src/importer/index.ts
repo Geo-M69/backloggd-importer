@@ -51,3 +51,17 @@ export type {
   ParsedOwnershipPayload,
   ParsedAbsentProof,
 } from './ownership-save-plan.js';
+
+export {
+  buildOwnershipConfirmationPrompt,
+  applyOwnershipConfirmationSelection,
+} from './ownership-save-confirmation.js';
+
+export type {
+  ConfirmationPrompt,
+  ConfirmationPromptItem,
+  SelectionInput,
+  ApplyOptions,
+  ApplyResult,
+  ConfirmedRecord,
+} from './ownership-save-confirmation.js';

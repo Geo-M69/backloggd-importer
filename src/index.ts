@@ -134,3 +134,16 @@ export type {
   SavePlanCounts,
   BuildSavePlanOptions,
 } from './importer/index.js';
+
+export {
+  buildOwnershipConfirmationPrompt,
+  applyOwnershipConfirmationSelection,
+} from './importer/index.js';
+export type {
+  ConfirmationPrompt,
+  ConfirmationPromptItem,
+  SelectionInput,
+  ApplyOptions,
+  ApplyResult,
+  ConfirmedRecord,
+} from './importer/index.js';

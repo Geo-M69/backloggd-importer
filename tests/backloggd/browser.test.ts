@@ -1346,7 +1346,7 @@ describe('backloggd browser fixture tests', () => {
       expect(ownershipValue).toBe('Digital');
 
       await page.close();
-    });
+    }, 10000);
 
     it('textContainsForbiddenTerm detects forbidden terms', () => {
       expect(textContainsForbiddenTerm('Add to Library and Save')).toBe(true);

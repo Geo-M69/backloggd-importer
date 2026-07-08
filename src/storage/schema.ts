@@ -104,5 +104,24 @@ export function getCreateTableSQL(): string {
     CREATE INDEX IF NOT EXISTS idx_import_items_session_status ON import_items(import_session_id, status);
     CREATE INDEX IF NOT EXISTS idx_import_items_session_app ON import_items(import_session_id, steam_app_id);
     CREATE INDEX IF NOT EXISTS idx_import_items_status ON import_items(status);
+
+    -- Table to record user confirmations for planned ownership saves (Phase 5C)
+    CREATE TABLE IF NOT EXISTS import_item_confirmations (
+      id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+      proposal_id               TEXT    NOT NULL UNIQUE,
+      import_session_id         TEXT    NOT NULL,
+      confirmation_batch_id     TEXT    NOT NULL,
+      confirmed_at              TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+      planned_platform          TEXT,
+      planned_ownership_type    TEXT,
+      planned_slug              TEXT,
+      planned_absent_checked_at TEXT,
+      planned_payload           TEXT,
+      status                    TEXT    NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed')),
+      FOREIGN KEY (proposal_id) REFERENCES proposals(id),
+      FOREIGN KEY (import_session_id) REFERENCES import_sessions(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_import_item_confirmations_batch ON import_item_confirmations(confirmation_batch_id);
   `;
 }

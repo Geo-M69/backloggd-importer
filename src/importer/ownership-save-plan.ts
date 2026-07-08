@@ -87,6 +87,8 @@ export interface SavePlanCandidate {
   desiredOwnershipType: string;
   /** Prior comparison/reconciliation proof summary. */
   proofSummary: string;
+  /** Canonical timestamp from the absent reconciliation proof. */
+  proofCheckedAt: string;
   /** Human-readable explanation safe for user-facing confirmation. */
   explanation: string;
   /** Machine-readable eligibility status — always 'eligible' for candidates. */
@@ -368,6 +370,7 @@ export function buildOwnershipSavePlan(options: BuildSavePlanOptions): Ownership
       desiredPlatform: payload.platform,
       desiredOwnershipType: payload.ownershipType,
       proofSummary: absentProof.reason,
+      proofCheckedAt: absentProof.checkedAt,
       explanation:
         'Steam/Digital ownership is absent on Backloggd; candidate for user-confirmed add.',
       eligibility: 'eligible',

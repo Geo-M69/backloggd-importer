@@ -40,3 +40,14 @@ export type {
   OwnershipComparisonRunnerResult,
   OwnershipComparisonRunnerOptions,
 } from './ownership-comparison-runner.js';
+
+export { buildOwnershipSavePlan } from './ownership-save-plan.js';
+
+export type {
+  OwnershipSavePlan,
+  SavePlanCandidate,
+  SavePlanCounts,
+  BuildSavePlanOptions,
+  ParsedOwnershipPayload,
+  ParsedAbsentProof,
+} from './ownership-save-plan.js';

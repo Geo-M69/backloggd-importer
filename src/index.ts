@@ -126,3 +126,11 @@ export type {
   SelectOptions,
   ItemCounts,
 } from './importer/index.js';
+
+export { buildOwnershipSavePlan } from './importer/index.js';
+export type {
+  OwnershipSavePlan,
+  SavePlanCandidate,
+  SavePlanCounts,
+  BuildSavePlanOptions,
+} from './importer/index.js';

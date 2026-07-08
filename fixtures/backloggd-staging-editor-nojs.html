@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Staging Test Game - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Staging Test Game</h1>
+
+    <!-- Library section with non-Steam entries (change needed) -->
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">PlayStation</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+
+      <!-- Editor controls directly visible (no opener needed) -->
+      <div class="field">
+        <label for="platform-select">Platform</label>
+        <select id="platform-select" name="platform" aria-label="Platform">
+          <option value="">Select platform...</option>
+          <option value="Steam">Steam</option>
+          <option value="PlayStation">PlayStation</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ownership-select">Ownership</label>
+        <select id="ownership-select" name="ownership_type" aria-label="Ownership">
+          <option value="">Select ownership...</option>
+          <option value="Owned">Owned</option>
+          <option value="Digital">Digital</option>
+          <option value="Physical">Physical</option>
+        </select>
+      </div>
+
+      <!-- Final action buttons (never clicked) -->
+      <button type="button" id="save-btn">Save</button>
+      <button type="button" id="submit-btn">Submit</button>
+      <button type="button" id="update-btn">Update</button>
+
+      <script>
+        // Click counters only (no library update logic)
+        window.__saveClickCount = 0;
+        window.__submitClickCount = 0;
+        window.__updateClickCount = 0;
+
+        document.getElementById('save-btn').addEventListener('click', function() {
+          window.__saveClickCount++;
+        });
+        document.getElementById('submit-btn').addEventListener('click', function() {
+          window.__submitClickCount++;
+        });
+        document.getElementById('update-btn').addEventListener('click', function() {
+          window.__updateClickCount++;
+        });
+      </script>
+    </section>
+  </main>
+</body>
+</html>

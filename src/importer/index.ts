@@ -65,3 +65,15 @@ export type {
   ApplyResult,
   ConfirmedRecord,
 } from './ownership-save-confirmation.js';
+
+export {
+  runConfirmedOwnershipStaging,
+  revalidateConfirmation,
+} from './ownership-staging-executor.js';
+
+export type {
+  OwnershipStagingExecutorOptions,
+  StagingResult,
+  StagingResultStatus,
+  ConfirmationRow,
+} from './ownership-staging-executor.js';

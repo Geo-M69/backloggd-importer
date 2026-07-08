@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Staging Test Game - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Staging Test Game</h1>
+
+    <!-- Library section with non-Steam entries (change needed) -->
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">PlayStation</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+
+      <!-- Platform select visible but NO ownership select -->
+      <div class="field">
+        <label for="platform-select">Platform</label>
+        <select id="platform-select" name="platform" aria-label="Platform">
+          <option value="">Select platform...</option>
+          <option value="Steam">Steam</option>
+        </select>
+      </div>
+
+      <!-- No safe opener to reveal additional controls -->
+      <!-- Only a final action button (never clicked) -->
+      <button type="button" id="save-btn">Save</button>
+    </section>
+
+    <script>
+      // Click counters
+      window.__platformChangeCount = 0;
+      window.__saveClickCount = 0;
+
+      document.getElementById('platform-select').addEventListener('change', function() {
+        window.__platformChangeCount++;
+      });
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+    </script>
+  </main>
+</body>
+</html>

@@ -298,7 +298,7 @@ export async function detectLoginState(
 // Helper: attempt to fill platform control
 // ---------------------------------------------------------------------------
 
-async function attemptFillPlatform(page: Page, timeout?: number): Promise<boolean> {
+export async function attemptFillPlatform(page: Page, timeout?: number): Promise<boolean> {
   const platformResult = await trySelectors(page, platformSelectStrategies, {
     visible: true,
     timeout,
@@ -316,7 +316,7 @@ async function attemptFillPlatform(page: Page, timeout?: number): Promise<boolea
 // Helper: attempt to fill ownership type control
 // ---------------------------------------------------------------------------
 
-async function attemptFillOwnership(page: Page, timeout?: number): Promise<boolean> {
+export async function attemptFillOwnership(page: Page, timeout?: number): Promise<boolean> {
   const ownershipResult = await trySelectors(page, ownershipTypeStrategies, {
     visible: true,
     timeout,

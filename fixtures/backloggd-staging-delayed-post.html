@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Staging Test Game - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Staging Test Game</h1>
+
+    <!-- Library section with non-Steam entries (change needed) -->
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">PlayStation</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+
+      <!-- Editor controls directly visible -->
+      <div class="field">
+        <label for="platform-select">Platform</label>
+        <select id="platform-select" name="platform" aria-label="Platform">
+          <option value="">Select platform...</option>
+          <option value="Steam">Steam</option>
+          <option value="PlayStation">PlayStation</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="ownership-select">Ownership</label>
+        <select id="ownership-select" name="ownership_type" aria-label="Ownership">
+          <option value="">Select ownership...</option>
+          <option value="Owned">Owned</option>
+          <option value="Digital">Digital</option>
+          <option value="Physical">Physical</option>
+        </select>
+      </div>
+
+      <!-- Final action buttons (never clicked) -->
+      <button type="button" id="save-btn">Save</button>
+    </section>
+
+    <script>
+      // Click counters
+      window.__platformChangeCount = 0;
+      window.__ownershipChangeCount = 0;
+      window.__saveClickCount = 0;
+
+      // Reflect select changes in the visible library section IMMEDIATELY
+      // then schedule a delayed POST to Backloggd after the visible update
+      document.getElementById('platform-select').addEventListener('change', function() {
+        window.__platformChangeCount++;
+        updateOwnershipEntry();
+        scheduleDelayedPost();
+      });
+      document.getElementById('ownership-select').addEventListener('change', function() {
+        window.__ownershipChangeCount++;
+        updateOwnershipEntry();
+        scheduleDelayedPost();
+      });
+
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+      });
+
+      function updateOwnershipEntry() {
+        var platform = document.getElementById('platform-select').value;
+        var ownership = document.getElementById('ownership-select').value;
+        var list = document.querySelector('[data-testid="ownership-entries"]');
+
+        if (!platform || !ownership) return;
+
+        var entries = list.querySelectorAll('.ownership-entry');
+        var found = false;
+        for (var i = 0; i < entries.length; i++) {
+          var pf = entries[i].querySelector('[data-field="platform"]');
+          if (pf && pf.textContent.trim() === platform) {
+            var of = entries[i].querySelector('[data-field="ownership"]');
+            if (of) of.textContent = ownership;
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) {
+          var li = document.createElement('li');
+          li.setAttribute('role', 'listitem');
+          li.className = 'ownership-entry';
+          li.setAttribute('data-testid', 'ownership-entry');
+          li.innerHTML = '<span data-field="platform">' + platform + '</span>' +
+                         '<span data-field="ownership">' + ownership + '</span>';
+          list.appendChild(li);
+        }
+      }
+
+      // Schedule a delayed POST to Backloggd after visible UI update.
+      // This simulates the real Backloggd behavior where a form change
+      // triggers an async autosave POST.
+      function scheduleDelayedPost() {
+        setTimeout(function() {
+          fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {
+            // Expected to be blocked by write guard
+          });
+        }, 1000);
+      }
+    </script>
+  </main>
+</body>
+</html>

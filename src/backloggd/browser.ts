@@ -329,11 +329,14 @@ export interface PocSessionOptions {
 }
 
 /**
- * Launch a persistent headed Chromium browser session.
+ * Launch a persistent Chromium browser session.
+ *
+ * Defaults to headed mode for manual sign-in flow.
+ * Pass `headless: true` for automated script use.
  */
 export async function launchSession(options: PocSessionOptions): Promise<BrowserContext> {
   const context = await chromium.launchPersistentContext(options.profileDir, {
-    headless: false,
+    headless: options.headless ?? false,
     viewport: { width: 1280, height: 720 },
   });
   return context;

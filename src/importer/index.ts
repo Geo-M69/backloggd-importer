@@ -85,3 +85,10 @@ export type {
   SaveResult,
   SaveResultStatus,
 } from './ownership-save-executor.js';
+
+export { executeConfirmedOwnershipSaves, countConfirmedRows } from './ownership-save-command.js';
+
+export type {
+  ExecuteConfirmedOwnershipSavesOptions,
+  ExecuteOwnershipSaveResult,
+} from './ownership-save-command.js';

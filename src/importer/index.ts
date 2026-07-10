@@ -77,3 +77,11 @@ export type {
   StagingResultStatus,
   ConfirmationRow,
 } from './ownership-staging-executor.js';
+
+export { runConfirmedOwnershipSave } from './ownership-save-executor.js';
+
+export type {
+  OwnershipSaveExecutorOptions,
+  SaveResult,
+  SaveResultStatus,
+} from './ownership-save-executor.js';

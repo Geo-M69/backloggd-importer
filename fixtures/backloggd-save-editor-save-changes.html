@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Save Changes Editor Test - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Save Changes Editor Test Game</h1>
+
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">PlayStation</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+
+      <button type="button" id="add-ownership-btn" data-testid="add-ownership"
+              class="add-ownership">Add Ownership</button>
+
+      <div id="ownership-editor" class="modal" style="display: none;" role="dialog" aria-label="Add Ownership">
+        <div class="field">
+          <label for="platform-select">Platform</label>
+          <select id="platform-select" name="platform" aria-label="Platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+            <option value="PlayStation">PlayStation</option>
+            <option value="Xbox">Xbox</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ownership-select">Ownership</label>
+          <select id="ownership-select" name="ownership_type" aria-label="Ownership">
+            <option value="">Select ownership...</option>
+            <option value="Owned">Owned</option>
+            <option value="Digital">Digital</option>
+            <option value="Physical">Physical</option>
+          </select>
+        </div>
+
+        <button type="button" id="save-changes-btn">Save changes</button>
+      </div>
+    </section>
+
+    <script>
+      window.__platformChangeCount = 0;
+      window.__ownershipChangeCount = 0;
+      window.__addOwnershipClickCount = 0;
+      window.__saveChangesClickCount = 0;
+
+      document.getElementById('add-ownership-btn').addEventListener('click', function() {
+        window.__addOwnershipClickCount++;
+        document.getElementById('ownership-editor').style.display = 'block';
+      });
+
+      document.getElementById('save-changes-btn').addEventListener('click', function() {
+        window.__saveChangesClickCount++;
+        updateOwnershipEntry();
+        document.getElementById('ownership-editor').style.display = 'none';
+        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {});
+      });
+
+      document.getElementById('platform-select').addEventListener('change', function() {
+        window.__platformChangeCount++;
+        updateOwnershipEntry();
+      });
+      document.getElementById('ownership-select').addEventListener('change', function() {
+        window.__ownershipChangeCount++;
+        updateOwnershipEntry();
+      });
+
+      function updateOwnershipEntry() {
+        var platform = document.getElementById('platform-select').value;
+        var ownership = document.getElementById('ownership-select').value;
+        var list = document.querySelector('[data-testid="ownership-entries"]');
+
+        if (!platform || !ownership) return;
+
+        var entries = list.querySelectorAll('.ownership-entry');
+        var found = false;
+        for (var i = 0; i < entries.length; i++) {
+          var pf = entries[i].querySelector('[data-field="platform"]');
+          if (pf && pf.textContent.trim() === platform) {
+            var of = entries[i].querySelector('[data-field="ownership"]');
+            if (of) of.textContent = ownership;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          var li = document.createElement('li');
+          li.setAttribute('role', 'listitem');
+          li.className = 'ownership-entry';
+          li.setAttribute('data-testid', 'ownership-entry');
+          li.innerHTML = '<span data-field="platform">' + platform + '</span>' +
+                         '<span data-field="ownership">' + ownership + '</span>';
+          list.appendChild(li);
+        }
+      }
+    </script>
+  </main>
+</body>
+</html>

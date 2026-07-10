@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Save Editor Bare Path - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Save Editor Bare Path Test Game</h1>
+
+    <!-- Library section with non-Steam entries (change needed) -->
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">PlayStation</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+
+      <!-- Safe opener: Add Ownership -->
+      <button type="button" id="add-ownership-btn" data-testid="add-ownership"
+              class="add-ownership">Add Ownership</button>
+
+      <!-- Editor modal (hidden by default) -->
+      <div id="ownership-editor" class="modal" style="display: none;" role="dialog" aria-label="Add Ownership">
+        <div class="field">
+          <label for="platform-select">Platform</label>
+          <select id="platform-select" name="platform" aria-label="Platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+            <option value="PlayStation">PlayStation</option>
+            <option value="Xbox">Xbox</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ownership-select">Ownership</label>
+          <select id="ownership-select" name="ownership_type" aria-label="Ownership">
+            <option value="">Select ownership...</option>
+            <option value="Owned">Owned</option>
+            <option value="Digital">Digital</option>
+            <option value="Physical">Physical</option>
+          </select>
+        </div>
+
+        <!-- Only Save button inside the editor (no other final actions) -->
+        <button type="button" id="save-btn">Save</button>
+
+        <!-- Cancel (safe to click) -->
+        <button type="button" id="cancel-btn">Cancel</button>
+      </div>
+    </section>
+
+    <script>
+      // Click counters for safety verification
+      window.__platformChangeCount = 0;
+      window.__ownershipChangeCount = 0;
+      window.__addOwnershipClickCount = 0;
+      window.__saveClickCount = 0;
+      window.__cancelClickCount = 0;
+      window.__deleteClickCount = 0;
+      window.__removeClickCount = 0;
+      window.__fullEditorClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__confirmClickCount = 0;
+      window.__updateClickCount = 0;
+      window.__submitClickCount = 0;
+
+      // Save success flag — set by save-btn click, read by tests
+      window.__saveSuccess = false;
+
+      // Opener: Add Ownership
+      document.getElementById('add-ownership-btn').addEventListener('click', function() {
+        window.__addOwnershipClickCount++;
+        document.getElementById('ownership-editor').style.display = 'block';
+      });
+
+      // Save — the ONLY final action clicked by the save executor.
+      // This fixture fires the save POST to the BARE path /api/library
+      // (no trailing slash) to verify that the save proof does NOT
+      // count this as a matching save request.  The save proof regex
+      // /^\/api\/library\/(?:\d+)?$/ requires the trailing slash, so
+      // a POST to /api/library alone is not a valid save request and
+      // the executor must reject it.
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+
+        // Update library section to reflect the saved values
+        updateOwnershipEntry();
+
+        // Signal save success
+        window.__saveSuccess = true;
+
+        // Hide the editor after save
+        document.getElementById('ownership-editor').style.display = 'none';
+
+        // Trigger a save POST to the BARE path (no trailing slash).
+        // The test route is expected to fulfill this so the response
+        // arrives, but the executor's save proof must reject it because
+        // the path does not match the exact allowed paths.
+        fetch('https://backloggd.com/api/library', { method: 'POST' }).catch(function() {
+          // Expected to be allowed or blocked; either is fine for fixture
+        });
+      });
+
+      // Cancel
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        window.__cancelClickCount++;
+        document.getElementById('ownership-editor').style.display = 'none';
+      });
+
+      // Reflect select changes in the visible library section
+      document.getElementById('platform-select').addEventListener('change', function() {
+        window.__platformChangeCount++;
+        updateOwnershipEntry();
+      });
+      document.getElementById('ownership-select').addEventListener('change', function() {
+        window.__ownershipChangeCount++;
+        updateOwnershipEntry();
+      });
+
+      // Update ownership entry to reflect current select values
+      function updateOwnershipEntry() {
+        var platform = document.getElementById('platform-select').value;
+        var ownership = document.getElementById('ownership-select').value;
+        var list = document.querySelector('[data-testid="ownership-entries"]');
+
+        if (!platform || !ownership) return;
+
+        var entries = list.querySelectorAll('.ownership-entry');
+        var found = false;
+        for (var i = 0; i < entries.length; i++) {
+          var pf = entries[i].querySelector('[data-field="platform"]');
+          if (pf && pf.textContent.trim() === platform) {
+            var of = entries[i].querySelector('[data-field="ownership"]');
+            if (of) of.textContent = ownership;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          var li = document.createElement('li');
+          li.setAttribute('role', 'listitem');
+          li.className = 'ownership-entry';
+          li.setAttribute('data-testid', 'ownership-entry');
+          li.innerHTML = '<span data-field="platform">' + platform + '</span>' +
+                         '<span data-field="ownership">' + ownership + '</span>';
+          list.appendChild(li);
+        }
+      }
+    </script>
+  </main>
+</body>
+</html>

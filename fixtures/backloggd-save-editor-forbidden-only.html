@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Save Editor Forbidden - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Save Editor Forbidden Test Game</h1>
+
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">PlayStation</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+
+      <button type="button" id="add-ownership-btn" data-testid="add-ownership"
+              class="add-ownership">Add Ownership</button>
+
+      <div id="ownership-editor" class="modal" style="display: none;" role="dialog" aria-label="Add Ownership">
+        <div class="field">
+          <label for="platform-select">Platform</label>
+          <select id="platform-select" name="platform" aria-label="Platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+            <option value="PlayStation">PlayStation</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ownership-select">Ownership</label>
+          <select id="ownership-select" name="ownership_type" aria-label="Ownership">
+            <option value="">Select ownership...</option>
+            <option value="Digital">Digital</option>
+            <option value="Physical">Physical</option>
+          </select>
+        </div>
+
+        <!-- Only forbidden actions — no safe Save button -->
+        <button type="button" id="delete-btn">Delete</button>
+        <button type="button" id="remove-btn">Remove</button>
+        <a href="#" id="full-editor-link">Use Full Editor</a>
+        <button type="button" id="create-log-btn">Create Log</button>
+        <button type="button" id="confirm-btn">Confirm</button>
+
+        <button type="button" id="cancel-btn">Cancel</button>
+      </div>
+    </section>
+
+    <script>
+      window.__saveClickCount = 0;
+      window.__deleteClickCount = 0;
+      window.__removeClickCount = 0;
+      window.__fullEditorClickCount = 0;
+      window.__createLogClickCount = 0;
+      window.__confirmClickCount = 0;
+      window.__addOwnershipClickCount = 0;
+      window.__cancelClickCount = 0;
+      window.__platformChangeCount = 0;
+      window.__ownershipChangeCount = 0;
+
+      document.getElementById('add-ownership-btn').addEventListener('click', function() {
+        window.__addOwnershipClickCount++;
+        document.getElementById('ownership-editor').style.display = 'block';
+      });
+
+      document.getElementById('delete-btn').addEventListener('click', function() {
+        window.__deleteClickCount++;
+      });
+      document.getElementById('remove-btn').addEventListener('click', function() {
+        window.__removeClickCount++;
+      });
+      document.getElementById('full-editor-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        window.__fullEditorClickCount++;
+      });
+      document.getElementById('create-log-btn').addEventListener('click', function() {
+        window.__createLogClickCount++;
+      });
+      document.getElementById('confirm-btn').addEventListener('click', function() {
+        window.__confirmClickCount++;
+      });
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        window.__cancelClickCount++;
+        document.getElementById('ownership-editor').style.display = 'none';
+      });
+
+      // Update ownership entry to reflect current select values (for staging verification)
+      function updateOwnershipEntry() {
+        var platform = document.getElementById('platform-select').value;
+        var ownership = document.getElementById('ownership-select').value;
+        var list = document.querySelector('[data-testid="ownership-entries"]');
+
+        if (!platform || !ownership) return;
+
+        var entries = list.querySelectorAll('.ownership-entry');
+        var found = false;
+        for (var i = 0; i < entries.length; i++) {
+          var pf = entries[i].querySelector('[data-field="platform"]');
+          if (pf && pf.textContent.trim() === platform) {
+            var of = entries[i].querySelector('[data-field="ownership"]');
+            if (of) of.textContent = ownership;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          var li = document.createElement('li');
+          li.setAttribute('role', 'listitem');
+          li.className = 'ownership-entry';
+          li.setAttribute('data-testid', 'ownership-entry');
+          li.innerHTML = '<span data-field="platform">' + platform + '</span>' +
+                         '<span data-field="ownership">' + ownership + '</span>';
+          list.appendChild(li);
+        }
+      }
+
+      document.getElementById('platform-select').addEventListener('change', function() {
+        window.__platformChangeCount++;
+        updateOwnershipEntry();
+      });
+      document.getElementById('ownership-select').addEventListener('change', function() {
+        window.__ownershipChangeCount++;
+        updateOwnershipEntry();
+      });
+    </script>
+  </main>
+</body>
+</html>

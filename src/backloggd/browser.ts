@@ -57,17 +57,27 @@ const SAFE_METHODS = new Set(['GET', 'HEAD']);
 const RENDER_EDITOR_REGEX = /^\/render-editor\/\d+$/;
 
 /**
+ * Matches Backloggd's library save API path exactly:
+ * POST /api/library/ or POST /api/library/<numeric-id>
+ *
+ * Only allowed during the narrow final save window.
+ * Must NOT match prefix substrings such as /api/library-malicious,
+ * nor the bare /api/library (no trailing slash).
+ * See enableSaveAllowance / disableSaveAllowance.
+ */
+const SAVE_API_REGEX = /^\/api\/library\/(?:\d+)?$/;
+
+/**
  * Minimum time to keep the opener reveal window active while Backloggd
  * schedules its asynchronous render-editor POST and renders the dialog.
  */
 const RENDER_EDITOR_REVEAL_TIMEOUT_MS = 2000;
 
 /**
- * Per-page write-guard state for the render-editor POST allowance.
+ * Per-page write-guard state for allowances.
  *
  * The route handler reads this at request time to decide whether to
- * allow POST /render-editor/<numeric-id> through when the temporary
- * opener-reveal window is active.
+ * allow requests through when a temporary allowance window is active.
  */
 interface WriteGuardState {
   renderEditorAllowed: boolean;
@@ -75,6 +85,10 @@ interface WriteGuardState {
    *  through during an active allowance window.  Reset after each reveal
    *  attempt so subsequent windows can be tracked independently. */
   renderEditorPostSeen: boolean;
+  /** Temporary allowance for the final ownership save POST to /api/library. */
+  saveAllowed: boolean;
+  /** Set to true when the route handler allows a save API request through. */
+  savePostSeen: boolean;
 }
 
 /**
@@ -105,7 +119,12 @@ export async function installWriteGuard(page: Page): Promise<void> {
   // would create multiple handlers whose allowance flags could disagree.
   if (guardedPages.has(page)) return;
 
-  const state: WriteGuardState = { renderEditorAllowed: false, renderEditorPostSeen: false };
+  const state: WriteGuardState = {
+    renderEditorAllowed: false,
+    renderEditorPostSeen: false,
+    saveAllowed: false,
+    savePostSeen: false,
+  };
   writeGuardStates.set(page, state);
 
   // Match both apex (backloggd.com) and any subdomain (*.backloggd.com)
@@ -129,6 +148,27 @@ export async function installWriteGuard(page: Page): Promise<void> {
           const parsed = new URL(requestUrl);
           if (RENDER_EDITOR_REGEX.test(parsed.pathname)) {
             state.renderEditorPostSeen = true;
+            await route.fallback();
+            return;
+          }
+        } catch {
+          // Invalid URL — fall through to block
+        }
+      }
+
+      // Narrow allowance for the final ownership save POST to /api/library
+      // (exact path match).  Method must be POST; DELETE/PATCH/PUT/other are
+      // blocked.  Path must match exactly — no prefix substrings allowed.
+      // Active only during the explicit save window (enableSaveAllowance).
+      if (state.saveAllowed && method === 'POST') {
+        const requestUrl = route.request().url();
+        try {
+          const parsed = new URL(requestUrl);
+          if (SAVE_API_REGEX.test(parsed.pathname)) {
+            state.savePostSeen = true;
+            // Let the request continue via fallback.  If a test route was
+            // registered for this URL it will handle it; otherwise the
+            // request goes to the real server.
             await route.fallback();
             return;
           }
@@ -176,6 +216,49 @@ export function disableRenderEditorAllowance(page: Page): void {
   if (state) {
     state.renderEditorAllowed = false;
   }
+}
+
+/**
+ * Temporarily allow POST to /api/library on the given page.
+ *
+ * Must be called *before* clicking the final save action and paired
+ * with a subsequent disableSaveAllowance() call after the save response
+ * has been observed or the save attempt has failed.
+ *
+ * The allowance is scoped to the page's write-guard route handler and
+ * has no effect if the guard has not been installed.
+ *
+ * During the allowance window only exact POST /api/library[/<id>] is
+ * allowed; DELETE, PATCH, PUT and other methods or paths are blocked.
+ */
+export function enableSaveAllowance(page: Page): void {
+  const state = writeGuardStates.get(page);
+  if (state) {
+    state.savePostSeen = false;
+    state.saveAllowed = true;
+  }
+}
+
+/**
+ * Revoke the save API allowance.
+ *
+ * Call this immediately after the save response has settled so that
+ * any stray POST to /api/library is blocked again.
+ */
+export function disableSaveAllowance(page: Page): void {
+  const state = writeGuardStates.get(page);
+  if (state) {
+    state.saveAllowed = false;
+  }
+}
+
+/**
+ * Returns true if a save API request was seen and allowed through during
+ * the most recent save allowance window.
+ */
+export function wasSavePostSeen(page: Page): boolean {
+  const state = writeGuardStates.get(page);
+  return state?.savePostSeen === true;
 }
 
 interface ExpectedLogDialogResult {

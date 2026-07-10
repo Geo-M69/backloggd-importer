@@ -19,6 +19,8 @@ import {
   installWriteGuard,
   enableRenderEditorAllowance,
   disableRenderEditorAllowance,
+  enableSaveAllowance,
+  disableSaveAllowance,
   checkLoginAfterPrompt,
   runPocSession,
   type PocSessionRunOptions,
@@ -860,6 +862,325 @@ describe('backloggd browser fixture tests', () => {
 
       await page.close();
     }, 30000);
+  });
+
+  // -----------------------------------------------------------------------
+  // Save-API POST allowance (POST /api/library/, POST /api/library/<id>)
+  // -----------------------------------------------------------------------
+
+  describe('save allowance', () => {
+    /**
+     * Test that POST /api/library/ is allowed during the save allowance
+     * window, and that the request reaches the test route (not blocked
+     * by the write guard).
+     */
+    it('allows POST /api/library/ during the save allowance window', async () => {
+      await context.route('https://backloggd.com/api/library/', async (route) => {
+        await route.fulfill({
+          status: 200,
+          body: '{"status":"ok"}',
+          contentType: 'application/json',
+          headers: { 'access-control-allow-origin': '*' },
+        });
+      });
+
+      try {
+        const page = await openFixture(context, 'backloggd-game-page.html');
+        await installWriteGuard(page);
+
+        const blockedByGuard = new Set<string>();
+        const handler = (req: import('playwright').Request) => {
+          const failure = req.failure();
+          if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+            blockedByGuard.add(`${req.method()} ${req.url()}`);
+          }
+        };
+        page.on('requestfailed', handler);
+
+        enableSaveAllowance(page);
+
+        await page.evaluate(async () => {
+          try {
+            await fetch('https://backloggd.com/api/library/', { method: 'POST' });
+          } catch {
+            // Expected if no test route is registered
+          }
+        });
+        await new Promise((r) => setTimeout(r, 500));
+
+        const blockedForUrl = [...blockedByGuard].some(
+          (r) => r.includes('/api/library/') && r.startsWith('POST'),
+        );
+        expect(blockedForUrl).toBe(false);
+
+        await page.close();
+      } finally {
+        await context.unroute('https://backloggd.com/api/library/');
+      }
+    }, 15000);
+
+    /**
+     * Test that POST /api/library/123 (numeric id) is allowed during the
+     * save allowance window.
+     */
+    it('allows POST /api/library/123 during the save allowance window', async () => {
+      await context.route('https://backloggd.com/api/library/123', async (route) => {
+        await route.fulfill({
+          status: 200,
+          body: '{"status":"ok"}',
+          contentType: 'application/json',
+          headers: { 'access-control-allow-origin': '*' },
+        });
+      });
+
+      try {
+        const page = await openFixture(context, 'backloggd-game-page.html');
+        await installWriteGuard(page);
+
+        const blockedByGuard = new Set<string>();
+        const handler = (req: import('playwright').Request) => {
+          const failure = req.failure();
+          if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+            blockedByGuard.add(`${req.method()} ${req.url()}`);
+          }
+        };
+        page.on('requestfailed', handler);
+
+        enableSaveAllowance(page);
+
+        await page.evaluate(async () => {
+          try {
+            await fetch('https://backloggd.com/api/library/123', { method: 'POST' });
+          } catch {
+            // Expected if no test route is registered
+          }
+        });
+        await new Promise((r) => setTimeout(r, 500));
+
+        const blockedForUrl = [...blockedByGuard].some(
+          (r) => r.includes('/api/library/123') && r.startsWith('POST'),
+        );
+        expect(blockedForUrl).toBe(false);
+
+        await page.close();
+      } finally {
+        await context.unroute('https://backloggd.com/api/library/123');
+      }
+    }, 15000);
+
+    /**
+     * Test that POST /api/library (without trailing slash) is BLOCKED
+     * during the save allowance window.  This is the exact path exactness
+     * finding: the previous regex matched the bare /api/library, but the
+     * allowed paths are only /api/library/ and /api/library/<numeric-id>.
+     */
+    it('blocks POST /api/library (no trailing slash) during the save allowance window', async () => {
+      const page = await openFixture(context, 'backloggd-game-page.html');
+      await installWriteGuard(page);
+      enableSaveAllowance(page);
+
+      const blockedByGuard = new Set<string>();
+      const handler = (req: import('playwright').Request) => {
+        const failure = req.failure();
+        if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+          blockedByGuard.add(`${req.method()} ${req.url()}`);
+        }
+      };
+      page.on('requestfailed', handler);
+
+      await page.evaluate(async () => {
+        try {
+          await fetch('https://backloggd.com/api/library', { method: 'POST' });
+        } catch {
+          // Expected
+        }
+      });
+      await new Promise((r) => setTimeout(r, 500));
+
+      // The request MUST have been blocked by the guard — even though
+      // the save allowance is active, the bare /api/library (no trailing
+      // slash) does not match the exact allowed paths.
+      const blockedForUrl = [...blockedByGuard].some(
+        (r) => r.includes('/api/library') && !r.includes('/api/library/') && r.startsWith('POST'),
+      );
+      expect(blockedForUrl).toBe(true);
+
+      await page.close();
+    }, 15000);
+
+    /**
+     * Regression test: /api/library-malicious must remain blocked during
+     * the save allowance window.
+     */
+    it('blocks POST /api/library-malicious during the save allowance window', async () => {
+      const page = await openFixture(context, 'backloggd-game-page.html');
+      await installWriteGuard(page);
+      enableSaveAllowance(page);
+
+      const blockedByGuard = new Set<string>();
+      const handler = (req: import('playwright').Request) => {
+        const failure = req.failure();
+        if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+          blockedByGuard.add(`${req.method()} ${req.url()}`);
+        }
+      };
+      page.on('requestfailed', handler);
+
+      await page.evaluate(async () => {
+        try {
+          await fetch('https://backloggd.com/api/library-malicious', { method: 'POST' });
+        } catch {
+          // Expected
+        }
+      });
+      await new Promise((r) => setTimeout(r, 500));
+
+      const blockedForUrl = [...blockedByGuard].some((r) => r.includes('/api/library-malicious'));
+      expect(blockedForUrl).toBe(true);
+
+      await page.close();
+    }, 15000);
+
+    /**
+     * DELETE /api/library/ must be blocked even during the save allowance
+     * window — the allowance is POST-only.
+     */
+    it('blocks DELETE /api/library/ during the save allowance window', async () => {
+      const page = await openFixture(context, 'backloggd-game-page.html');
+      await installWriteGuard(page);
+      enableSaveAllowance(page);
+
+      const blockedByGuard = new Set<string>();
+      const handler = (req: import('playwright').Request) => {
+        const failure = req.failure();
+        if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+          blockedByGuard.add(`${req.method()} ${req.url()}`);
+        }
+      };
+      page.on('requestfailed', handler);
+
+      await page.evaluate(async () => {
+        try {
+          await fetch('https://backloggd.com/api/library/', { method: 'DELETE' });
+        } catch {
+          // Expected
+        }
+      });
+      await new Promise((r) => setTimeout(r, 500));
+
+      const blockedForUrl = [...blockedByGuard].some(
+        (r) => r.startsWith('DELETE') && r.includes('/api/library/'),
+      );
+      expect(blockedForUrl).toBe(true);
+
+      await page.close();
+    }, 15000);
+
+    /**
+     * PATCH /api/library/ must be blocked even during the save allowance
+     * window.
+     */
+    it('blocks PATCH /api/library/ during the save allowance window', async () => {
+      const page = await openFixture(context, 'backloggd-game-page.html');
+      await installWriteGuard(page);
+      enableSaveAllowance(page);
+
+      const blockedByGuard = new Set<string>();
+      const handler = (req: import('playwright').Request) => {
+        const failure = req.failure();
+        if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+          blockedByGuard.add(`${req.method()} ${req.url()}`);
+        }
+      };
+      page.on('requestfailed', handler);
+
+      await page.evaluate(async () => {
+        try {
+          await fetch('https://backloggd.com/api/library/', { method: 'PATCH' });
+        } catch {
+          // Expected
+        }
+      });
+      await new Promise((r) => setTimeout(r, 500));
+
+      const blockedForUrl = [...blockedByGuard].some(
+        (r) => r.startsWith('PATCH') && r.includes('/api/library/'),
+      );
+      expect(blockedForUrl).toBe(true);
+
+      await page.close();
+    }, 15000);
+
+    /**
+     * PUT /api/library/ must be blocked even during the save allowance
+     * window.
+     */
+    it('blocks PUT /api/library/ during the save allowance window', async () => {
+      const page = await openFixture(context, 'backloggd-game-page.html');
+      await installWriteGuard(page);
+      enableSaveAllowance(page);
+
+      const blockedByGuard = new Set<string>();
+      const handler = (req: import('playwright').Request) => {
+        const failure = req.failure();
+        if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+          blockedByGuard.add(`${req.method()} ${req.url()}`);
+        }
+      };
+      page.on('requestfailed', handler);
+
+      await page.evaluate(async () => {
+        try {
+          await fetch('https://backloggd.com/api/library/', { method: 'PUT' });
+        } catch {
+          // Expected
+        }
+      });
+      await new Promise((r) => setTimeout(r, 500));
+
+      const blockedForUrl = [...blockedByGuard].some(
+        (r) => r.startsWith('PUT') && r.includes('/api/library/'),
+      );
+      expect(blockedForUrl).toBe(true);
+
+      await page.close();
+    }, 15000);
+
+    /**
+     * Allowance closes when disableSaveAllowance is called: subsequent
+     * POST /api/library/ must be blocked.
+     */
+    it('blocks POST /api/library/ after the save allowance is disabled', async () => {
+      const page = await openFixture(context, 'backloggd-game-page.html');
+      await installWriteGuard(page);
+      enableSaveAllowance(page);
+      disableSaveAllowance(page);
+
+      const blockedByGuard = new Set<string>();
+      const handler = (req: import('playwright').Request) => {
+        const failure = req.failure();
+        if (failure && failure.errorText.includes('ERR_BLOCKED_BY_CLIENT')) {
+          blockedByGuard.add(`${req.method()} ${req.url()}`);
+        }
+      };
+      page.on('requestfailed', handler);
+
+      await page.evaluate(async () => {
+        try {
+          await fetch('https://backloggd.com/api/library/', { method: 'POST' });
+        } catch {
+          // Expected
+        }
+      });
+      await new Promise((r) => setTimeout(r, 500));
+
+      const blockedForUrl = [...blockedByGuard].some(
+        (r) => r.startsWith('POST') && r.includes('/api/library/'),
+      );
+      expect(blockedForUrl).toBe(true);
+
+      await page.close();
+    }, 15000);
   });
 
   // -----------------------------------------------------------------------

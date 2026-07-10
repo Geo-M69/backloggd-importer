@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Save Editor Pre And Post - Backloggd</title>
+</head>
+<body>
+  <main>
+    <h1>Save Editor Pre And Post Test Game</h1>
+
+    <!-- Library section with non-Steam entries (change needed) -->
+    <section id="library" data-testid="library" aria-label="Library">
+      <h2>Library</h2>
+      <ul role="list" data-testid="ownership-entries" aria-label="Ownership entries">
+        <li role="listitem" class="ownership-entry" data-testid="ownership-entry">
+          <span data-field="platform">PlayStation</span>
+          <span data-field="ownership">Physical</span>
+        </li>
+      </ul>
+
+      <!-- Safe opener: Add Ownership -->
+      <button type="button" id="add-ownership-btn" data-testid="add-ownership"
+              class="add-ownership">Add Ownership</button>
+
+      <!-- Editor modal (hidden by default) -->
+      <div id="ownership-editor" class="modal" style="display: none;" role="dialog" aria-label="Add Ownership">
+        <div class="field">
+          <label for="platform-select">Platform</label>
+          <select id="platform-select" name="platform" aria-label="Platform">
+            <option value="">Select platform...</option>
+            <option value="Steam">Steam</option>
+            <option value="PlayStation">PlayStation</option>
+            <option value="Xbox">Xbox</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ownership-select">Ownership</label>
+          <select id="ownership-select" name="ownership_type" aria-label="Ownership">
+            <option value="">Select ownership...</option>
+            <option value="Owned">Owned</option>
+            <option value="Digital">Digital</option>
+            <option value="Physical">Physical</option>
+          </select>
+        </div>
+
+        <!-- Only Save button inside the editor (no other final actions) -->
+        <button type="button" id="save-btn">Save</button>
+
+        <!-- Cancel (safe to click) -->
+        <button type="button" id="cancel-btn">Cancel</button>
+      </div>
+    </section>
+
+    <script>
+      // Finding 2 regression fixture:
+      //   * A "pre-click" matching POST fires AFTER the staging settle
+      //     window closes but BEFORE the executor clicks Save.  This POST
+      //     is NOT click-driven — it must not count as the clicked Save
+      //     request, but it must not make the executor's success path
+      //     impossible when the click-driven POST is also valid.
+      //   * The Save click handler fires exactly one matching POST
+      //     synchronously.  This is the click-driven request — the
+      //     executor MUST accept it as a click-driven valid request.
+      //
+      // Implementation: schedule the pre-click POST from the OWNERSHIP
+      // select change event with a delay of ~1700ms.  Staging fires that
+      // event during platform/ownership fill; the 1700ms delay waits
+      // past the staging settle window (1500ms) but fires before the
+      // executor's click happens a few hundred ms later.
+
+      window.__platformChangeCount = 0;
+      window.__ownershipChangeCount = 0;
+      window.__addOwnershipClickCount = 0;
+      window.__saveClickCount = 0;
+      window.__cancelClickCount = 0;
+      window.__preClickPostSent = 0;
+
+      // Opener: Add Ownership
+      document.getElementById('add-ownership-btn').addEventListener('click', function() {
+        window.__addOwnershipClickCount++;
+        document.getElementById('ownership-editor').style.display = 'block';
+      });
+
+      // Save — fires ONE matching POST in the click bubble handler
+      // (the click-driven request).  The mousedown handler fires a
+      // second matching POST in the order: mousedown → mouseup → click.
+      // Because both fire during the executor's save allowance window,
+      // BOTH POSTs are allowed by the write guard.  But the mousedown
+      // fetch happens BEFORE the click event reaches the control, so
+      // (a) it fires before the capture-phase click marker records the
+      //     browser wall-clock time of the `click` event, and
+      // (b) it is therefore NOT counted as click-driven.
+      // Only the click-bubble fetch counts as click-driven.
+      document.getElementById('save-btn').addEventListener('mousedown', function() {
+        window.__preMouseDownAt = Date.now();
+        // Pre-click matching POST — fires BEFORE the click event marker.
+        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {});
+      });
+      document.getElementById('save-btn').addEventListener('click', function() {
+        window.__saveClickCount++;
+        window.__clickBubbleAt = Date.now();
+        updateOwnershipEntry();
+        document.getElementById('ownership-editor').style.display = 'none';
+        // Click-driven matching POST.
+        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {});
+      });
+
+      // Cancel
+      document.getElementById('cancel-btn').addEventListener('click', function() {
+        window.__cancelClickCount++;
+        document.getElementById('ownership-editor').style.display = 'none';
+      });
+
+      // Reflect select changes in the visible library section
+      document.getElementById('platform-select').addEventListener('change', function() {
+        window.__platformChangeCount++;
+        updateOwnershipEntry();
+      });
+      document.getElementById('ownership-select').addEventListener('change', function() {
+        window.__ownershipChangeCount++;
+        updateOwnershipEntry();
+      });
+
+      function updateOwnershipEntry() {
+        var platform = document.getElementById('platform-select').value;
+        var ownership = document.getElementById('ownership-select').value;
+        var list = document.querySelector('[data-testid="ownership-entries"]');
+
+        if (!platform || !ownership) return;
+
+        var entries = list.querySelectorAll('.ownership-entry');
+        var found = false;
+        for (var i = 0; i < entries.length; i++) {
+          var pf = entries[i].querySelector('[data-field="platform"]');
+          if (pf && pf.textContent.trim() === platform) {
+            var of = entries[i].querySelector('[data-field="ownership"]');
+            if (of) of.textContent = ownership;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          var li = document.createElement('li');
+          li.setAttribute('role', 'listitem');
+          li.className = 'ownership-entry';
+          li.setAttribute('data-testid', 'ownership-entry');
+          li.innerHTML = '<span data-field="platform">' + platform + '</span>' +
+                         '<span data-field="ownership">' + ownership + '</span>';
+          list.appendChild(li);
+        }
+      }
+    </script>
+  </main>
+</body>
+</html>

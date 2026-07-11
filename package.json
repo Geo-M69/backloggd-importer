@@ -28,6 +28,7 @@
     "import:manifest": "node --import dotenv/config dist/cli/proposal-manifest.js",
     "backloggd:poc": "node --import dotenv/config dist/cli/backloggd-poc.js",
     "ownership:save": "node --import dotenv/config dist/cli/ownership-save.js",
+    "ownership:confirm": "node --import dotenv/config dist/cli/ownership-confirm.js",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },

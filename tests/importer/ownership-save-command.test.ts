@@ -761,13 +761,16 @@ describe('ownership-save-command — exit-status decisions', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Test 3–6 — Single failure exits nonzero
+  // Test 3–9 — Single failure exits nonzero
   // -----------------------------------------------------------------------
   const SINGLE_FAILURE_STATUSES: SaveResultStatus[] = [
     'blockedWrite',
     'saveFailed',
     'verificationFailed',
     'browserFailed',
+    'stagingFailed',
+    'unsupported',
+    'stale',
   ];
 
   SINGLE_FAILURE_STATUSES.forEach((status) => {
@@ -793,7 +796,7 @@ describe('ownership-save-command — exit-status decisions', () => {
   });
 
   // -----------------------------------------------------------------------
-  // Test 7 — Mixed saved + saveFailed exits nonzero
+  // Test 10 — Mixed saved + saveFailed exits nonzero
   // -----------------------------------------------------------------------
   it('mixed saved + saveFailed has failures (exit nonzero)', async () => {
     const pid1 = seedEligibleItem(db, { sessionId: SESSION_ID, steamAppId: 730 });
@@ -829,5 +832,81 @@ describe('ownership-save-command — exit-status decisions', () => {
     // Verify per-confirmation status is preserved
     expect(results[0].status).toBe('saved');
     expect(results[1].status).toBe('saveFailed');
+  });
+
+  // -----------------------------------------------------------------------
+  // Test 11 — Mixed saved + stale exits nonzero
+  // -----------------------------------------------------------------------
+  it('mixed saved + stale has failures (exit nonzero)', async () => {
+    const pid1 = seedEligibleItem(db, { sessionId: SESSION_ID, steamAppId: 730 });
+    const pid2 = seedEligibleItem(db, {
+      sessionId: SESSION_ID,
+      steamAppId: 731,
+      backloggdSlug: 'game-731',
+      gameTitle: 'Game 731',
+    });
+    createConfirmedConfirmation(db, SESSION_ID, pid1);
+    createConfirmedConfirmation(db, SESSION_ID, pid2);
+
+    const mockResults: SaveResult[] = [
+      { proposalId: pid1, status: 'saved', confirmationBatchId: 'batch-1', detail: 'ok' },
+      {
+        proposalId: pid2,
+        status: 'stale',
+        confirmationBatchId: 'batch-1',
+        detail: 'import_item_status_changed',
+      },
+    ];
+    const mockExecutor = createMockSaveExecutor(mockResults);
+
+    const results = await executeConfirmedOwnershipSaves({
+      db,
+      sessionId: SESSION_ID,
+      confirmedSaveEnabled: true,
+      page: createMockPage(),
+      saveExecutor: mockExecutor,
+    });
+
+    expect(hasAnyFailure(results)).toBe(true);
+    expect(results[0].status).toBe('saved');
+    expect(results[1].status).toBe('stale');
+  });
+
+  // -----------------------------------------------------------------------
+  // Test 12 — Mixed saved + blockedWrite exits nonzero
+  // -----------------------------------------------------------------------
+  it('mixed saved + blockedWrite has failures (exit nonzero)', async () => {
+    const pid1 = seedEligibleItem(db, { sessionId: SESSION_ID, steamAppId: 730 });
+    const pid2 = seedEligibleItem(db, {
+      sessionId: SESSION_ID,
+      steamAppId: 731,
+      backloggdSlug: 'game-731',
+      gameTitle: 'Game 731',
+    });
+    createConfirmedConfirmation(db, SESSION_ID, pid1);
+    createConfirmedConfirmation(db, SESSION_ID, pid2);
+
+    const mockResults: SaveResult[] = [
+      { proposalId: pid1, status: 'saved', confirmationBatchId: 'batch-1', detail: 'ok' },
+      {
+        proposalId: pid2,
+        status: 'blockedWrite',
+        confirmationBatchId: 'batch-1',
+        detail: 'write_blocked',
+      },
+    ];
+    const mockExecutor = createMockSaveExecutor(mockResults);
+
+    const results = await executeConfirmedOwnershipSaves({
+      db,
+      sessionId: SESSION_ID,
+      confirmedSaveEnabled: true,
+      page: createMockPage(),
+      saveExecutor: mockExecutor,
+    });
+
+    expect(hasAnyFailure(results)).toBe(true);
+    expect(results[0].status).toBe('saved');
+    expect(results[1].status).toBe('blockedWrite');
   });
 });

@@ -878,7 +878,63 @@ describe('ownership workflow — status/playlog exclusion', () => {
 });
 
 // ==========================================================================
-// Tests 21-22: Import safety — no Playwright / write-guard imports
+// Test 21: Full offline staged composition
+// ==========================================================================
+
+describe('ownership workflow — staged offline composition', () => {
+  let db: Database.Database;
+  const SESSION = 'test-session';
+
+  beforeEach(() => {
+    db = createFreshDb();
+    seedMinimalSession(db, SESSION);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('composes compare -> show-plan -> confirm -> save offline', async () => {
+    // Simulate comparison result: seed approved-only items with absent proof
+    const pid = seedEligibleItem(db, { sessionId: SESSION });
+
+    // Show plan (read-only step)
+    const planResult = buildAndShowPlan({ db, sessionId: SESSION });
+    expect(planResult.plan.counts.eligibleCandidates).toBe(1);
+
+    // Confirm eligible proposal
+    const confirmResult = confirmExactProposals({ db, sessionId: SESSION, proposalIds: [pid] });
+    expect(confirmResult.confirmed).toHaveLength(1);
+    expect(confirmResult.confirmed[0].proposalId).toBe(pid);
+
+    // Save confirmed rows via command layer (mock executor — no browser)
+    const mockExec = createMockSaveExecutor([
+      {
+        proposalId: pid,
+        status: 'saved' as const,
+        confirmationBatchId: confirmResult.confirmed[0].confirmationBatchId,
+        detail: 'ok',
+      },
+    ]);
+    const page = createMockPage();
+    const results = await executeConfirmedOwnershipSaves({
+      db,
+      sessionId: SESSION,
+      confirmedSaveEnabled: true,
+      page: page as any,
+      saveExecutor: mockExec,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0].status).toBe('saved');
+    expect(results[0].proposalId).toBe(pid);
+    // The mock executor was called, proving the full offline staged flow
+    // completed without a real browser, live Backloggd, or new orchestration.
+  });
+});
+
+// ==========================================================================
+// Tests 22-23: Import safety — no Playwright / write-guard imports
 // ==========================================================================
 
 describe('ownership workflow — test file import safety', () => {

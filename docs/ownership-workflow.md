@@ -41,7 +41,7 @@ npm run ownership:compare -- --session <id>
 ### What it does
 
 - Opens each approved ownership item's Backloggd game page in a
-  write-guarded browser session.
+  browser session (read-only inspection — no writes performed).
 - Reads the visible ownership state (platform, ownership type).
 - Compares the current state to the desired state in the proposal.
 - Records the comparison result for each item.
@@ -61,7 +61,7 @@ is the only mutation performed by the comparison step.
 - Does **not** call `runConfirmedOwnershipSave`.
 - Does **not** call `applyOwnershipConfirmationSelection`.
 - Does **not** call `stageOwnershipInBrowser` or `runConfirmedOwnershipStaging`.
-- Does **not** call `processItem`, `transitionItem`, or `reconcileItem`.
+- Does **not** call `processItem`.
 
 ### Exit codes
 
@@ -258,6 +258,26 @@ be stale.  Then retry confirmation.
 - Check whether the game page has changed or the editor interaction is
   selecting the wrong element.
 - Do not retry without investigating the write guard log.
+
+### If save returns stagingFailed
+
+- The browser staging (platform/ownership selector fill) did not complete
+  as expected.
+- No save action was attempted — the item remains in the `importing` state.
+- Check whether the Backloggd game page renders the ownership editor
+  platform/ownership selects correctly.
+- Check whether the page content or selectors have changed.
+- Fix the underlying issue, then retry the save.
+
+### If save returns unsupported
+
+- No unique safe final save action was found in the visible editor.
+- No save action was attempted — the item remains in the `importing` state.
+- The editor may be in an unexpected state (e.g. a different dialog layout,
+  missing Save button, or multiple ambiguous actions).
+- Manually inspect the Backloggd editor on the game page.
+- If the editor is different from expected, file an issue with a
+  description of the new layout.
 
 ### If save returns saveFailed
 

@@ -11,6 +11,88 @@ operator-gated process.
 
 ---
 
+## Supervised dry-run checklist
+
+Before preparing a supervised dry run, confirm each item below.
+
+### Identify your session
+
+The session ID identifies the import batch whose ownership proposals you
+intend to review.  Find it by running:
+
+```bash
+npm run import:manifest
+```
+
+Look for the session ID printed at the top of the manifest output.
+If manifest is unavailable, query the database directly
+(the default live database path is `./import.db`):
+
+```bash
+sqlite3 import.db "SELECT id, status, total_games FROM import_sessions;"
+```
+
+### Steps to run during this dry run
+
+Only the following commands are allowed in a read-only rehearsal:
+
+1. **Compare** (Step 1) — reads live Backloggd game pages.  Requires a
+   logged-in browser profile.  Exits nonzero if any unsafe outcomes
+   (conflict, unknown, left-importing, malformed) are found.
+2. **Show plan** (Step 2) — shows the save plan from local DB only.
+   No browser needed.
+3. **Confirm proposals** (Step 3) — creates durable local confirmation
+   rows for eligible candidates.  No browser needed.  Only run this
+   after manually reviewing the plan and choosing exact proposal IDs.
+
+### Step NOT to run during this dry run
+
+```bash
+# FORBIDDEN in dry run:
+npm run ownership:save -- --session <id> --execute-confirmed-ownership-saves
+```
+
+The save command writes to Backloggd and is **not** part of this
+rehearsal.  It will be used later in a supervised live-save slice.
+
+### What to capture for review
+
+- **Session ID** — the full session ID used for all commands.
+- **Compare summary** — outcome summary (already-present, change-needed,
+  conflict, unknown, left-importing, malformed counts) and exit code.
+- **Show-plan counts** — eligible candidates, exclusion counts
+  (terminal, unsupported-kind, malformed-metadata, missing-or-invalid-
+  absent-proof, stale-canonical).
+- **Proposal IDs selected for confirmation**, if any.
+- **Confirmation batch ID** and confirmed proposal IDs.
+- **Confirmation row count** — number of rows created for the target
+  session (verify via `sqlite3 ./import.db "SELECT COUNT(*) FROM import_item_confirmations WHERE import_session_id = '<id>';"`).
+  Confirmation rows are **local-only** and **session-scoped** — they
+  exist only in the local database and are tied to exactly one session.
+  They have no Backloggd side effects.
+- **Unresolved manual-review items** — any conflict, unknown,
+  left-importing, or malformed rows that require investigation before
+  a live save can proceed.
+
+### Aborting safely
+
+To abort the workflow at any point before the save step, simply stop
+running commands.  No cleanup is needed:
+
+- After **compare**: no rows created, no Backloggd writes performed.
+- After **show-plan**: no state changed.
+- After **confirm**: local confirmation rows exist but do not affect
+  Backloggd.  You can leave them in place or delete them via:
+
+  ```bash
+  sqlite3 ./import.db "DELETE FROM import_item_confirmations WHERE import_session_id = '<id>';"
+  ```
+
+  Deleting confirmation rows is safe — they have no Backloggd side
+  effects.
+
+---
+
 ## Preconditions
 
 Before beginning the ownership workflow, all of the following must be true:

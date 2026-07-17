@@ -22,10 +22,22 @@ import type { ImportManifest } from '../review/manifest.js';
 import { resolveImportDbPath } from './import-db.js';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { hasHelpFlag } from './cli-help.js';
 
 async function main(): Promise<void> {
-  console.log('Building import manifest…');
-  const result = await runProposalManifest(process.argv.slice(2), process.env);
+  const args = process.argv.slice(2);
+  if (hasHelpFlag(args)) {
+    console.log('Usage: npm run import:manifest');
+    console.log();
+    console.log('Export the approved import manifest as JSON.');
+    console.log('Options:');
+    console.log('  --output <path>    Write manifest to a file instead of stdout');
+    console.log('  --session <id>     Export only proposals for the given session');
+    process.exit(0);
+  }
+
+  console.log('Building import manifest\u2026');
+  const result = await runProposalManifest(args, process.env);
 
   if (result.outputPath) {
     console.log(`  Manifest written to: ${result.outputPath}`);

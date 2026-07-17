@@ -17,6 +17,7 @@
 import { z } from 'zod';
 import { openDatabase, closeDatabase } from '../storage/database.js';
 import { matchGames } from '../igdb/matcher.js';
+import { hasHelpFlag } from './cli-help.js';
 
 /**
  * Per-command validation: only IGDB_CLIENT_ID and IGDB_CLIENT_SECRET are required.
@@ -48,6 +49,18 @@ function loadIgdbConfig(): IgdbConfig | null {
 }
 
 async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (hasHelpFlag(args)) {
+    console.log('Usage: npm run igdb:match');
+    console.log();
+    console.log(
+      'Match Steam games against IGDB to identify exact, ambiguous, and unmatched titles.',
+    );
+    console.log('Options:');
+    console.log('  --force    Re-match already matched games');
+    process.exit(0);
+  }
+
   // Parse CLI flags
   const force = process.argv.includes('--force');
 

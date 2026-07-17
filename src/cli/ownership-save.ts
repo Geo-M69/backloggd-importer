@@ -28,6 +28,7 @@ import { pathToFileURL } from 'node:url';
 import { openDatabase, closeDatabase } from '../storage/database.js';
 import { resolveImportDbPath } from './import-db.js';
 import { launchSession } from '../backloggd/browser.js';
+import { hasHelpFlag } from './cli-help.js';
 import {
   executeConfirmedOwnershipSaves,
   countConfirmedRows,
@@ -101,6 +102,26 @@ function printResults(results: { proposalId: string; status: string; detail?: st
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+
+  // --- Help check before any side effects ---
+  if (hasHelpFlag(args)) {
+    console.log(
+      'Usage: npm run ownership:save -- --session <id> --execute-confirmed-ownership-saves',
+    );
+    console.log('');
+    console.log('Execute confirmed ownership saves on Backloggd.');
+    console.log('Options:');
+    console.log('  --session <id>                          Required. Import session ID.');
+    console.log(
+      '  --execute-confirmed-ownership-saves     Required. Opt-in to final save execution.',
+    );
+    console.log('  --profile-dir <path>                    Optional. Persistent browser profile.');
+    console.log('                                          Default: .playwright/backloggd-profile');
+    console.log(
+      '  --headless                              Optional. Run browser in headless mode.',
+    );
+    process.exit(0);
+  }
 
   // --- Parse required flags ---
   const rawSessionId = getFlagValue(args, '--session');

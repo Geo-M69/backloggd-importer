@@ -29,6 +29,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { openDatabase, closeDatabase } from '../storage/database.js';
 import { resolveImportDbPath } from './import-db.js';
+import { hasHelpFlag } from './cli-help.js';
 import {
   buildAndShowPlan,
   confirmExactProposals,
@@ -86,6 +87,20 @@ export function computeConfirmExitCode(result: ApplyResult): boolean {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+
+  // --- Help check before any side effects ---
+  if (hasHelpFlag(args)) {
+    console.log('Usage: npm run ownership:confirm -- --session <id> <action>');
+    console.log('');
+    console.log('Show or confirm ownership save plans for an import session.');
+    console.log('Actions (exactly one required):');
+    console.log('  --show-plan                    Show ownership save plan (read-only)');
+    console.log('  --confirm-proposals <ids>      Confirm specific proposal IDs (comma-separated)');
+    console.log('  --confirm-all-eligible         Confirm all eligible candidates');
+    console.log('Options:');
+    console.log('  --session <id>                 Required. Import session ID.');
+    process.exit(0);
+  }
 
   // --- Parse required flags ---
   const rawSessionId = getFlagValue(args, '--session');

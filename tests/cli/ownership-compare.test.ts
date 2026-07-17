@@ -174,6 +174,54 @@ describe('ownership-compare CLI — executable behaviour', () => {
   });
 
   // ===================================================================
+  //  --help / -h returns 0 with no side effects
+  // ===================================================================
+
+  it('returns 0 when --help flag is passed', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(['--help'], deps);
+    expect(exitCode).toBe(0);
+  });
+
+  it('returns 0 when -h flag is passed', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(['-h'], deps);
+    expect(exitCode).toBe(0);
+  });
+
+  it('does not call resolveImportDbPath when --help is passed', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--help'], deps);
+    expect(calls.resolveImportDbPath).not.toHaveBeenCalled();
+  });
+
+  it('does not call openDatabase when --help is passed', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--help'], deps);
+    expect(calls.openDatabase).not.toHaveBeenCalled();
+  });
+
+  it('does not call launchSession when --help is passed', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--help'], deps);
+    expect(calls.launchSession).not.toHaveBeenCalled();
+  });
+
+  it('does not call runOwnershipCompareCommand when --help is passed', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--help'], deps);
+    expect(calls.runOwnershipCompareCommand).not.toHaveBeenCalled();
+  });
+
+  it('emits usage text via consoleLog when --help is passed', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--help'], deps);
+    expect(calls.consoleLog).toHaveBeenCalledWith(
+      expect.stringContaining('Usage: npm run ownership:compare'),
+    );
+  });
+
+  // ===================================================================
   //  5-8. Whitespace-only --session
   // ===================================================================
 

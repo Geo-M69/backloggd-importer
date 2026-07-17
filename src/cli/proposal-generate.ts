@@ -21,6 +21,7 @@ import type { ProposalPolicy } from '../models/proposal.js';
 import { resolveImportDbPath } from './import-db.js';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { hasHelpFlag } from './cli-help.js';
 
 function parseIntArg(args: readonly string[], flag: string): number | undefined {
   const idx = args.indexOf(flag);
@@ -60,8 +61,24 @@ export function runProposalGenerate(
 }
 
 async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (hasHelpFlag(args)) {
+    console.log('Usage: npm run import:propose');
+    console.log();
+    console.log(
+      'Generate ownership, status, and playlog proposals from active games and IGDB matches.',
+    );
+    console.log('Options:');
+    console.log('  --playtime-threshold <min>    Minimum playtime minutes for status suggestions');
+    console.log(
+      '  --suggest-backlog             Suggest backlog status for games with zero playtime',
+    );
+    console.log('  --enable-playlog              Generate playlog proposals');
+    process.exit(0);
+  }
+
   console.log('Generating proposals…');
-  const result = runProposalGenerate(process.argv.slice(2), process.env);
+  const result = runProposalGenerate(args, process.env);
 
   console.log(`  Session:           ${result.sessionId}`);
   console.log(`  Active games:      ${result.totalGames}`);

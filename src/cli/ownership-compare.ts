@@ -31,6 +31,7 @@ import { resolveImportDbPath } from './import-db.js';
 import type { ImportDbResolution } from './import-db.js';
 import { launchSession } from '../backloggd/browser.js';
 import type { PocSessionOptions } from '../backloggd/browser.js';
+import { hasHelpFlag } from './cli-help.js';
 import {
   runOwnershipCompareCommand,
   countApprovedOwnershipItems,
@@ -116,6 +117,19 @@ export async function runOwnershipCompareCli(
   argv: string[],
   deps: OwnershipCompareCliDeps = productionDeps,
 ): Promise<number> {
+  // --- Help check before any side effects ---
+  if (hasHelpFlag(argv)) {
+    deps.consoleLog('Usage: npm run ownership:compare -- --session <id> [options]');
+    deps.consoleLog('');
+    deps.consoleLog('Read-only ownership comparison against Backloggd.');
+    deps.consoleLog('Options:');
+    deps.consoleLog('  --session <id>          Required. Import session ID.');
+    deps.consoleLog('  --profile-dir <path>    Optional. Persistent browser profile directory.');
+    deps.consoleLog('                          Default: .playwright/backloggd-profile');
+    deps.consoleLog('  --headless              Optional. Run browser in headless mode.');
+    return 0;
+  }
+
   // --- Parse required flags ---
   const rawSessionId = getFlagValue(argv, '--session');
 

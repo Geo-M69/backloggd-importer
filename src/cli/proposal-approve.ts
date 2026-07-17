@@ -19,6 +19,7 @@ import type { ApproveResult } from '../review/approver.js';
 import { resolveImportDbPath } from './import-db.js';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { hasHelpFlag } from './cli-help.js';
 
 export function resolveProposalApproveDbPath(env: NodeJS.ProcessEnv = process.env): string {
   return resolveImportDbPath(env).dbPath;
@@ -37,7 +38,15 @@ export function runProposalApprove(env: NodeJS.ProcessEnv = process.env): Approv
 }
 
 async function main(): Promise<void> {
-  console.log('Approving exact‑match ownership proposals…');
+  const args = process.argv.slice(2);
+  if (hasHelpFlag(args)) {
+    console.log('Usage: npm run import:approve-exact');
+    console.log();
+    console.log('Bulk-approve exact-match ownership proposals that do not require manual review.');
+    process.exit(0);
+  }
+
+  console.log('Approving exact\u2011match ownership proposals\u2026');
   const result = runProposalApprove(process.env);
 
   if (result.approved === 0) {

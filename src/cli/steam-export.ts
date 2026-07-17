@@ -21,6 +21,7 @@ import { openDatabase, closeDatabase } from '../storage/database.js';
 import { fetchOwnedGames } from '../steam/client.js';
 import { processAndStoreGames } from '../steam/normalize.js';
 import { exportGames } from '../steam/exporter.js';
+import { hasHelpFlag } from './cli-help.js';
 
 /**
  * Per-command validation: only STEAM_API_KEY and STEAM_USER_ID are required.
@@ -52,6 +53,14 @@ function loadSteamConfig(): SteamConfig | null {
 }
 
 async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (hasHelpFlag(args)) {
+    console.log('Usage: npm run steam:export');
+    console.log();
+    console.log('Export a Steam library to the local database and JSON/CSV files.');
+    process.exit(0);
+  }
+
   // Try loading config; fall back to fixture mode if missing
   const config = loadSteamConfig();
   const isFixture = !config;

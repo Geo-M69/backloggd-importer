@@ -17,6 +17,7 @@
 
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { hasHelpFlag } from './cli-help.js';
 import {
   loadManifest,
   selectItems,
@@ -62,6 +63,20 @@ function parseAppIds(args: readonly string[]): number[] {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+
+  if (hasHelpFlag(args)) {
+    console.log('Usage: npm run backloggd:poc -- --manifest <path> [options]');
+    console.log('');
+    console.log('Backloggd interaction proof of concept — read-only page inspection.');
+    console.log('Options:');
+    console.log('  --manifest <path>       Required. Path to approved manifest JSON.');
+    console.log('  --profile-dir <path>    Optional. Persistent browser profile directory.');
+    console.log('                          Default: .playwright/backloggd-profile');
+    console.log('  --limit <n>             Optional. Max items to process. Default: 1');
+    console.log('  --steam-app-id <id>     Optional. Filter to specific AppID(s). Repeatable.');
+    console.log('  --diag-dir <path>       Optional. Diagnostics output directory.');
+    process.exit(0);
+  }
 
   const manifestPath = getFlagValue(args, '--manifest');
   if (!manifestPath) {

@@ -131,6 +131,13 @@ const genericMembershipCueStrategies: SelectorStrategy[] = [
   { name: 'text-in-your-library', selector: ':text-is("In your library")' },
 ];
 
+/**
+ * Status button names for the button-based Backloggd logged-in game page UI.
+ * These are Backloggd statuses represented as toggle buttons.
+ * "Played" corresponds to what was previously "Completed" in older UI variants.
+ */
+const BUTTON_BASED_STATUS_NAMES = ['Played', 'Playing', 'Backlog', 'Wishlist'];
+
 // ---------------------------------------------------------------------------
 // Login / challenge / rate-limit cue strategies
 // ---------------------------------------------------------------------------
@@ -459,6 +466,109 @@ function emptyState(
 }
 
 // ---------------------------------------------------------------------------
+// Button-based Backloggd UI detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Escape regex special characters in a string.
+ */
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Detect the active (pressed/selected) status button on a button-based
+ * Backloggd game page.
+ *
+ * Returns the canonical name of the active status button if exactly one
+ * status button has a pressed/active state, or null if the state is
+ * ambiguous (zero or multiple pressed buttons).
+ *
+ * Only recognizes the status names listed in BUTTON_BASED_STATUS_NAMES.
+ */
+async function detectActiveStatusButton(page: Page): Promise<string | null> {
+  for (const name of BUTTON_BASED_STATUS_NAMES) {
+    const pressedLocator = page.getByRole('button', {
+      name: new RegExp(`^\\s*${escapeRegex(name)}\\s*$`, 'i'),
+      pressed: true,
+      disabled: false,
+    });
+    const enabledCount = await pressedLocator.count().catch(() => 0);
+    if (enabledCount > 0) {
+      const allEnabledPressed = page.getByRole('button', {
+        pressed: true,
+        disabled: false,
+      });
+      const totalEnabledPressed = await allEnabledPressed.count().catch(() => 0);
+      if (totalEnabledPressed === 1) return name;
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Try to read ownership state from a button-based Backloggd logged-in game
+ * page where the old library region (data-testid="library") is absent and
+ * status toggle buttons are used instead.
+ *
+ * Returns a VisibleBackloggdState only when a trustworthy active status
+ * button is detected.  Returns null when the button state is ambiguous or
+ * no status buttons are present (the caller should fall back to the
+ * existing unsupported path).
+ */
+async function tryButtonBasedState(
+  page: Page,
+  visibleTitle: string,
+  expectedSlug: string,
+  verified: boolean,
+  notes: string[],
+): Promise<VisibleBackloggdState | null> {
+  let hasAnyStatusButton = false;
+  for (const name of BUTTON_BASED_STATUS_NAMES) {
+    const locator = page.getByRole('button', {
+      name: new RegExp(`^\\s*${escapeRegex(name)}\\s*$`, 'i'),
+      disabled: false,
+    });
+    const count = await locator.count().catch(() => 0);
+    if (count > 0) {
+      hasAnyStatusButton = true;
+      break;
+    }
+  }
+  if (!hasAnyStatusButton) return null;
+
+  const activeStatus = await detectActiveStatusButton(page);
+  if (!activeStatus) {
+    notes.push('ambiguous-button-state');
+    return null;
+  }
+
+  notes.push(`button-based-status:${activeStatus}`);
+
+  return {
+    game: { visibleTitle, slug: expectedSlug, verified },
+    library: {
+      membership: 'present',
+      completeness: 'complete',
+      ownershipEntries: [],
+      addControl: 'absent',
+    },
+    status: {
+      value: activeStatus,
+      evidence: 'explicit-value',
+    },
+    diagnostics: {
+      pageType: 'game',
+      regionCount: 0,
+      entryCount: 0,
+      addControlCount: 0,
+      notes: [...notes],
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Reader
 // ---------------------------------------------------------------------------
 
@@ -506,6 +616,19 @@ export async function readVisibleBackloggdState(
   // Locate visible library regions.  More than one visible region is ambiguous.
   const regionCount = await countVisible(page, libraryRegionStrategies);
   if (regionCount === 0) {
+    // Phase 5F Slice 4n — try button-based Backloggd UI before falling back.
+    // The current Backloggd logged-in game page uses toggle buttons
+    // (Played/Playing/Backlog/Wishlist) instead of the old library region
+    // ([data-testid="library"], [aria-label="Library"], #library).
+    const buttonState = await tryButtonBasedState(
+      page,
+      visibleTitle,
+      expectedSlug,
+      verified,
+      notes,
+    );
+    if (buttonState) return buttonState;
+
     // Finding 2 — missing ownership region returns unknown/unsupported.
     notes.push('no-visible-library-region');
     return {

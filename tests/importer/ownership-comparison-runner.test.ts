@@ -1235,4 +1235,117 @@ describe('ownership-comparison-runner', () => {
 
     await page.close();
   });
+
+  // ===================================================================
+  //  Phase 5F Slice 4n — button-based Backloggd UI does not produce
+  //  generic unsupported-read
+  // ===================================================================
+
+  it('button-based Backloggd UI does not produce generic unsupported-read', async () => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    const proposalId = randomUUID();
+    seedImportItem(db, {
+      proposalId,
+      steamAppId: 440,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-button-based',
+      gameTitle: 'The Legend of Zelda: Breath of the Wild',
+    });
+
+    const result = await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+    });
+
+    // The reader returns completeness='complete' (membership='present')
+    // for a trustworthy active status button.  The comparator sees
+    // no Steam entries and no additive control → unknown:no-safe-add-path.
+    // Crucially, NOT unsupported-read.
+    expect(result.processed).toBe(1);
+    expect(result.unknown).toBe(1);
+    expect(result.alreadyPresent).toBe(0);
+    expect(result.changeNeeded).toBe(0);
+
+    const item = getItem(db, proposalId);
+    expect(item?.status).toBe('failed');
+    expect(item?.outcomeReason).toContain('unknown:ownership:');
+    expect(item?.outcomeReason).not.toContain('unsupported-read');
+
+    await page.close();
+  });
+
+  it('ambiguous button-based state (no pressed button) still produces unsupported-read', async () => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    const proposalId = randomUUID();
+    seedImportItem(db, {
+      proposalId,
+      steamAppId: 620,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-button-based-ambiguous',
+      gameTitle: 'Hollow Knight',
+    });
+
+    const result = await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+    });
+
+    // Falls through to the old unsupported-read path.
+    expect(result.processed).toBe(1);
+    expect(result.unknown).toBe(1);
+
+    const item = getItem(db, proposalId);
+    expect(item?.status).toBe('failed');
+    expect(item?.outcomeReason).toContain('unknown:ownership:');
+    expect(item?.outcomeReason).toContain('unsupported-read');
+
+    await page.close();
+  });
+
+  it('disabled active status button remains unknown/unsupported', async () => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    const proposalId = randomUUID();
+    seedImportItem(db, {
+      proposalId,
+      steamAppId: 440,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-button-based-disabled-active',
+      gameTitle: 'The Legend of Zelda: Breath of the Wild',
+    });
+
+    const result = await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+    });
+
+    // Falls through to unsupported-read since the disabled active button
+    // must not be treated as a trustworthy state.
+    expect(result.processed).toBe(1);
+    expect(result.unknown).toBe(1);
+
+    const item = getItem(db, proposalId);
+    expect(item?.status).toBe('failed');
+    expect(item?.outcomeReason).toContain('unknown:ownership:');
+    expect(item?.outcomeReason).toContain('unsupported-read');
+
+    await page.close();
+  });
 });

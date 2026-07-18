@@ -805,4 +805,130 @@ describe('readVisibleBackloggdState — fixture coverage', () => {
       await page.close();
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Phase 5F Slice 4n — button-based Backloggd logged-in UI support
+  // -----------------------------------------------------------------------
+
+  describe('button-based Backloggd logged-in UI', () => {
+    it('returns non-unsupported state when a trustworthy active status button is visible', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based.html',
+        'The Legend of Zelda: Breath of the Wild',
+        'backloggd-ownership-button-based',
+      );
+      // Game must be verified.
+      expect(state.game.verified).toBe(true);
+      // Library membership must be present (status button is active).
+      expect(state.library.membership).toBe('present');
+      // Completeness must NOT be 'unsupported' — the old unsupported-read
+      // path must not fire for a recognizable button-based page.
+      expect(state.library.completeness).not.toBe('unsupported');
+      // No platform/ownership entries — button-based UI has no such detail.
+      expect(state.library.ownershipEntries).toEqual([]);
+      // The active status must be captured.
+      expect(state.status.value).toBe('Played');
+      expect(state.status.evidence).toBe('explicit-value');
+      // Diagnostics must contain the button-based note.
+      expect(state.diagnostics.notes).toContain('button-based-status:Played');
+
+      // The comparator must NOT return unsupported-read.
+      const result = compareOwnership(STEAM_DIGITAL, state.library);
+      expect(result.reasonCode).not.toBe('unsupported-read');
+      // Without platform/ownership detail, the comparator must still return
+      // unknown (never change-needed for ambiguous membership).
+      expect(result.classification).toBe('unknown');
+      expect(result.reasonCode).toBe('no-safe-add-path');
+    });
+
+    it('hidden Log a Game h1 is ignored for title verification', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based.html',
+        'The Legend of Zelda: Breath of the Wild',
+        'backloggd-ownership-button-based',
+      );
+      // The visible game title h1 must be used, not the hidden "Log a Game".
+      expect(state.game.verified).toBe(true);
+      expect(state.game.visibleTitle).toBe('The Legend of Zelda: Breath of the Wild');
+    });
+
+    it('ambiguous button state (no button pressed) returns unsupported', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-ambiguous.html',
+        'Hollow Knight',
+        'backloggd-ownership-button-based-ambiguous',
+      );
+      // No active status button → falls through to the existing unsupported path.
+      expect(state.library.completeness).toBe('unsupported');
+      expect(state.library.membership).toBe('unknown');
+      expect(state.status.evidence).toBe('unknown');
+      expect(state.diagnostics.notes).toContain('no-visible-library-region');
+
+      const result = compareOwnership(STEAM_DIGITAL, state.library);
+      expect(result.classification).toBe('unknown');
+      expect(result.reasonCode).toBe('unsupported-read');
+    });
+
+    it('title mismatch does not masquerade as login/challenge', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-title-mismatch.html',
+        'The Legend of Zelda',
+        'backloggd-ownership-button-based-title-mismatch',
+      );
+      // Title mismatch: visible h1 says "Some Other Game", expected is
+      // "The Legend of Zelda".  Must NOT look like a login/challenge.
+      expect(state.game.verified).toBe(false);
+      expect(state.game.visibleTitle).toBe('Some Other Game');
+      expect(state.diagnostics.pageType).toBe('unknown');
+      expect(state.diagnostics.notes).toContain('game-verification-failed');
+      // Must not be detected as login or challenge.
+      expect(state.diagnostics.pageType).not.toBe('login');
+      expect(state.diagnostics.pageType).not.toBe('challenge');
+      expect(state.diagnostics.pageType).not.toBe('rate-limit');
+
+      const result = compareOwnership(STEAM_DIGITAL, state.library);
+      expect(result.classification).toBe('unknown');
+      expect(result.reasonCode).toBe('unsupported-read');
+    });
+
+    it('visible game title h1 takes precedence over hidden Log a Game', async () => {
+      // Verify that the hidden "Log a Game" h1 is never used for heading
+      // lookup.  Our fixture has it as hidden, but even if visible strategies
+      // accidentally match it, the visible-title path uses innerText which
+      // excludes hidden descendants.
+      const state = await readFixture(
+        'backloggd-ownership-button-based.html',
+        'The Legend of Zelda: Breath of the Wild',
+        'backloggd-ownership-button-based',
+      );
+      expect(state.game.visibleTitle).not.toBe('Log a Game');
+      expect(state.game.visibleTitle).toBe('The Legend of Zelda: Breath of the Wild');
+    });
+
+    it('read-only path does not click status buttons (evaluated via getByRole count — no interaction)', async () => {
+      // The button-based detection uses only getByRole + count(), which
+      // never clicks or mutates the page.  This is inherently read-only.
+      // The existing click-tracker tests above already prove the overall
+      // reader never clicks any control, including status buttons.
+      const state = await readFixture(
+        'backloggd-ownership-button-based.html',
+        'The Legend of Zelda: Breath of the Wild',
+        'backloggd-ownership-button-based',
+      );
+      expect(state.game.verified).toBe(true);
+      expect(state.library.completeness).not.toBe('unsupported');
+    });
+
+    it('disabled active status button does not produce trustworthy state', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-disabled-active.html',
+        'The Legend of Zelda: Breath of the Wild',
+        'backloggd-ownership-button-based-disabled-active',
+      );
+      expect(state.library.completeness).toBe('unsupported');
+      expect(state.library.membership).toBe('unknown');
+      expect(state.status.evidence).toBe('unknown');
+      expect(state.diagnostics.notes).toContain('ambiguous-button-state');
+    });
+  });
 });

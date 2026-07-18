@@ -74,6 +74,11 @@ const cliEntries: CliHelpExpectation[] = [
     usagePattern: /Usage: npm run ownership:compare/,
   },
   {
+    name: 'ownership:retry-failed',
+    sourceName: 'ownership-retry-failed',
+    usagePattern: /Usage: npm run ownership:retry-failed/,
+  },
+  {
     name: 'ownership:confirm',
     sourceName: 'ownership-confirm',
     usagePattern: /Usage: npm run ownership:confirm/,
@@ -117,8 +122,14 @@ describe('CLI help safety — all entrypoints', () => {
         const helpLine = source.indexOf(callPattern);
         expect(helpLine).not.toBe(-1);
         const functionStartSearch = source.indexOf('async function main');
-        const runnerStartSearch = source.indexOf('export async function runOwnershipCompareCli');
-        const mainStart = functionStartSearch !== -1 ? functionStartSearch : runnerStartSearch;
+        const runnerStartSearch = [
+          'export async function runOwnershipCompareCli',
+          'export async function runOwnershipRetryFailedCli',
+        ]
+          .map((needle) => source.indexOf(needle))
+          .find((idx) => idx !== -1);
+        const mainStart =
+          functionStartSearch !== -1 ? functionStartSearch : (runnerStartSearch ?? -1);
         expect(mainStart).not.toBe(-1);
         const helpIndex = source.indexOf(callPattern, mainStart);
 

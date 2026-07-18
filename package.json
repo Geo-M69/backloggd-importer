@@ -31,6 +31,7 @@
     "ownership:save": "node --import dotenv/config dist/cli/ownership-save.js",
     "ownership:confirm": "node --import dotenv/config dist/cli/ownership-confirm.js",
     "ownership:compare": "node --import dotenv/config dist/cli/ownership-compare.js",
+    "ownership:retry-failed": "node --import dotenv/config dist/cli/ownership-retry-failed.js",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build"
   },

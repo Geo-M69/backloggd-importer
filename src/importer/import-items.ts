@@ -789,6 +789,72 @@ export function resetFailedForRetry(db: Database.Database, sessionId: string): n
 }
 
 /**
+ * Count ownership compare failures that match a narrow outcome reason prefix.
+ *
+ * This intentionally only inspects local import_items state. It does not touch
+ * proposals, confirmations, browser code, or terminal saved/skipped rows.
+ */
+export function countOwnershipCompareFailuresForRetryByReasonPrefix(
+  db: Database.Database,
+  sessionId: string,
+  reasonPrefix: string,
+): number {
+  const prefix = reasonPrefix.trim();
+  if (!sessionId.trim() || !prefix) return 0;
+
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS cnt
+       FROM import_items
+       WHERE import_session_id = ?
+         AND proposal_kind = 'ownership'
+         AND status IN ('failed', 'importing')
+         AND outcome_reason IS NOT NULL
+         AND substr(outcome_reason, 1, ?) = ?`,
+    )
+    .get(sessionId.trim(), prefix.length, prefix) as { cnt: number } | undefined;
+
+  return row?.cnt ?? 0;
+}
+
+/**
+ * Reset ownership compare failures that match a narrow outcome reason prefix.
+ *
+ * The reset is local-only and idempotent: matched failed/importing ownership
+ * rows return to approved and have compare failure diagnostics cleared.
+ * Terminal saved/skipped rows and unrelated failed rows are not selected.
+ */
+export function resetOwnershipCompareFailuresForRetryByReasonPrefix(
+  db: Database.Database,
+  sessionId: string,
+  reasonPrefix: string,
+): number {
+  const prefix = reasonPrefix.trim();
+  if (!sessionId.trim() || !prefix) return 0;
+
+  const result = db
+    .prepare(
+      `UPDATE import_items
+       SET status = 'approved',
+           outcome_reason = NULL,
+           last_error = NULL,
+           updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+       WHERE import_session_id = ?
+         AND proposal_kind = 'ownership'
+         AND status IN ('failed', 'importing')
+         AND outcome_reason IS NOT NULL
+         AND substr(outcome_reason, 1, ?) = ?`,
+    )
+    .run(sessionId.trim(), prefix.length, prefix);
+
+  if (result.changes > 0) {
+    recalculateSessionCounters(db, sessionId.trim());
+  }
+
+  return result.changes;
+}
+
+/**
  * Transition a specific failed item back to approved for retry.
  *
  * @returns The updated item, or null if not found or not failed.

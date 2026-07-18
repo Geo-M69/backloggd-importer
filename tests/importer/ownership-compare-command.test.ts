@@ -631,6 +631,24 @@ describe('ownership-compare-command', () => {
     expect(output).toContain('Unsupported kind: 3');
   });
 
+  it('formats session blocker guidance', () => {
+    const output = formatCompareResult({
+      processed: 0,
+      alreadyPresent: 1,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 1,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+      sessionBlocker: 'login',
+    });
+
+    expect(output).toContain('Session blocker: page-type:login');
+    expect(output).toContain('Fix the browser profile or Backloggd access state');
+    expect(output).toContain('retry only the matching local compare failures');
+  });
+
   // ===================================================================
   //  11. Integration does not create confirmation rows (static assertion)
   // ===================================================================

@@ -49,6 +49,8 @@ export interface OwnershipComparisonRunnerResult {
   malformed: number;
   /** Items skipped because they are not ownership kind. */
   unsupportedKind: number;
+  /** Session-level blocker that stopped further processing, if detected. */
+  sessionBlocker?: 'login' | 'challenge' | 'rate-limit';
 }
 
 export interface OwnershipComparisonRunnerOptions {
@@ -113,6 +115,12 @@ function getGameTitle(db: Database.Database, steamAppId: number): string | null 
  */
 function sanitizeReason(reason: string): string {
   return reason.replace(/[^a-zA-Z0-9:_-]/g, '_').substring(0, 200);
+}
+
+function isSessionBlockerPageType(
+  pageType: string,
+): pageType is 'login' | 'challenge' | 'rate-limit' {
+  return pageType === 'login' || pageType === 'challenge' || pageType === 'rate-limit';
 }
 
 // ---------------------------------------------------------------------------
@@ -464,18 +472,20 @@ export async function runOwnershipComparison(
     // 4e. Verify the page is usable (not a blocker page)
     if (!visibleState.game.verified || visibleState.diagnostics.pageType !== 'game') {
       // If the page is a blocker (login/challenge/rate-limit) or unverified,
-      // fail deterministically.  The read returned an unsupported/unknown
-      // state rather than throwing.
+      // fail only the current slug group deterministically.  Session-level
+      // blockers then stop the runner so later approved rows remain retryable.
+      const pageType = visibleState.diagnostics.pageType;
+      const reasonCode = pageType !== 'game' ? `page-type:${pageType}` : 'game-verification-failed';
       for (const vi of importingItems) {
-        const reasonCode =
-          visibleState.diagnostics.pageType !== 'game'
-            ? `page-type:${visibleState.diagnostics.pageType}`
-            : 'game-verification-failed';
         transitionItem(db, vi.item.proposalId, 'failed', {
           outcomeReason: sanitizeReason(`unknown:ownership:${reasonCode}`),
           lastError: sanitizeReason(`Page not ready: ${reasonCode}`),
         });
         result.unknown++;
+      }
+      if (isSessionBlockerPageType(pageType)) {
+        result.sessionBlocker = pageType;
+        break;
       }
       continue;
     }

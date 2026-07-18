@@ -212,6 +212,13 @@ export function formatCompareResult(result: OwnershipCompareResult): string {
   lines.push(formatStatusLine('Left importing', result.leftImporting));
   lines.push(formatStatusLine('Malformed', result.malformed));
   lines.push(formatStatusLine('Unsupported kind', result.unsupportedKind));
+  if (result.sessionBlocker) {
+    lines.push('');
+    lines.push(`Session blocker: page-type:${result.sessionBlocker}`);
+    lines.push(
+      'Fix the browser profile or Backloggd access state, then retry only the matching local compare failures.',
+    );
+  }
 
   return lines.join('\n');
 }

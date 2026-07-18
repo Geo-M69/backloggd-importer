@@ -200,6 +200,35 @@ is the only mutation performed by the comparison step.
 | All already-present / change-needed  | 0         |
 | Any conflict, unknown, left-importing, or malformed | 1 |
 
+### Login, challenge, or rate-limit recovery
+
+If compare stops on a session blocker such as `page-type:login`,
+`page-type:challenge`, or `page-type:rate-limit`, do not proceed to
+confirmation or save.  First fix or re-authenticate the browser profile, then
+inspect the local retry scope before changing any rows:
+
+```bash
+npm run ownership:retry-failed -- --session <id> --reason-prefix unknown:ownership:page-type:login --dry-run
+```
+
+Only after reviewing the dry-run counts, run the same command without
+`--dry-run`:
+
+```bash
+npm run ownership:retry-failed -- --session <id> --reason-prefix unknown:ownership:page-type:login
+```
+
+For challenge or rate-limit blockers, use the matching literal prefix
+(`unknown:ownership:page-type:challenge` or
+`unknown:ownership:page-type:rate-limit`).  Then rerun comparison:
+
+```bash
+npm run ownership:compare -- --session <id>
+```
+
+Do not run confirmation or save until comparison succeeds without unsafe
+outcomes.
+
 ---
 
 ## Step 3 — Show plan

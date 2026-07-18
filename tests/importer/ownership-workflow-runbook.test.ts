@@ -129,6 +129,39 @@ describe('ownership-workflow runbook — command coverage', () => {
     expect(seedIdx).toBeGreaterThanOrEqual(0);
     expect(compareIdx).toBeGreaterThan(seedIdx);
   });
+
+  it('lists ownership:retry-failed dry-run and reset commands with a reason prefix', () => {
+    expect(RUNBOOK).toContain(
+      'npm run ownership:retry-failed -- --session <id> --reason-prefix unknown:ownership:page-type:login --dry-run',
+    );
+    expect(RUNBOOK).toContain(
+      'npm run ownership:retry-failed -- --session <id> --reason-prefix unknown:ownership:page-type:login',
+    );
+  });
+
+  it('documents login-blocker recovery before returning to compare and before confirm/save', () => {
+    const sectionMatch = RUNBOOK.match(
+      /### Login, challenge, or rate-limit recovery[\s\S]*?(?=\n---)/,
+    );
+    expect(sectionMatch).not.toBeNull();
+    const section = (sectionMatch as RegExpMatchArray)[0];
+
+    const fixIdx = section.indexOf('fix or re-authenticate the browser profile');
+    const dryRunIdx = section.indexOf(
+      'npm run ownership:retry-failed -- --session <id> --reason-prefix unknown:ownership:page-type:login --dry-run',
+    );
+    const resetIdx = section.indexOf(
+      'npm run ownership:retry-failed -- --session <id> --reason-prefix unknown:ownership:page-type:login\n',
+    );
+    const compareIdx = section.indexOf('npm run ownership:compare -- --session <id>');
+    const doNotConfirmIdx = section.indexOf('Do not run confirmation or save');
+
+    expect(fixIdx).toBeGreaterThanOrEqual(0);
+    expect(dryRunIdx).toBeGreaterThan(fixIdx);
+    expect(resetIdx).toBeGreaterThan(dryRunIdx);
+    expect(compareIdx).toBeGreaterThan(resetIdx);
+    expect(doNotConfirmIdx).toBeGreaterThan(compareIdx);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -209,6 +242,14 @@ describe('package.json — ownership script coverage', () => {
     const scripts = PACKAGE.scripts ?? {};
     expect(scripts).toHaveProperty('ownership:save');
     expect(scripts['ownership:save']).toContain('ownership-save');
+  });
+
+  it('includes ownership:retry-failed script', () => {
+    const scripts = PACKAGE.scripts ?? {};
+    expect(scripts).toHaveProperty('ownership:retry-failed');
+    expect(scripts['ownership:retry-failed']).toBe(
+      'node --import dotenv/config dist/cli/ownership-retry-failed.js',
+    );
   });
 });
 
@@ -380,6 +421,19 @@ describe('package.json — ownership script safety', () => {
         expect.unreachable(`Script "${name}" combines compare and save: ${value}`);
       }
     }
+  });
+
+  it('ownership:retry-failed is not chained with compare, confirm, or save', () => {
+    const scripts = PACKAGE.scripts ?? {};
+    const script = scripts['ownership:retry-failed'];
+    expect(script).toBe('node --import dotenv/config dist/cli/ownership-retry-failed.js');
+    expect(script).not.toMatch(/&&|;|\|\||\|/);
+    expect(script).not.toContain('ownership:compare');
+    expect(script).not.toContain('ownership:confirm');
+    expect(script).not.toContain('ownership:save');
+    expect(script).not.toContain('ownership-compare');
+    expect(script).not.toContain('ownership-confirm');
+    expect(script).not.toContain('ownership-save.');
   });
 });
 

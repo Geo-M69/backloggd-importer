@@ -18,6 +18,8 @@ export {
   recalculateSessionCounters,
   getItemCounts,
   resetFailedForRetry,
+  countOwnershipCompareFailuresForRetryByReasonPrefix,
+  resetOwnershipCompareFailuresForRetryByReasonPrefix,
   resetFailedItemForRetry,
   validateManifestVersion,
   validateManifestAgainstDb,

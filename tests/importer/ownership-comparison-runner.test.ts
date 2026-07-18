@@ -401,6 +401,110 @@ describe('ownership-comparison-runner', () => {
     await page.close();
   });
 
+  it('stops after login blocker and leaves later approved rows retryable', async () => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    const alreadyPresentPid = randomUUID();
+    seedImportItem(db, {
+      proposalId: alreadyPresentPid,
+      steamAppId: 100,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-steam-digital-present',
+      gameTitle: 'Team Fortress 2',
+    });
+
+    const loginBlockedPid = randomUUID();
+    seedImportItem(db, {
+      proposalId: loginBlockedPid,
+      steamAppId: 200,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-login-page',
+      gameTitle: 'Blocked Page',
+    });
+
+    const unprocessedPid = randomUUID();
+    seedImportItem(db, {
+      proposalId: unprocessedPid,
+      steamAppId: 300,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-other-platforms',
+      gameTitle: 'BioShock',
+    });
+
+    const result = await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+    });
+
+    expect(result.sessionBlocker).toBe('login');
+    expect(result.alreadyPresent).toBe(1);
+    expect(result.unknown).toBe(1);
+    expect(result.leftImporting).toBe(0);
+
+    expect(getItem(db, alreadyPresentPid)?.status).toBe('skipped');
+    expect(getItem(db, alreadyPresentPid)?.outcomeReason).toBe('already-present:ownership');
+    expect(getItem(db, loginBlockedPid)?.status).toBe('failed');
+    expect(getItem(db, loginBlockedPid)?.outcomeReason).toBe('unknown:ownership:page-type:login');
+    expect(getItem(db, unprocessedPid)?.status).toBe('approved');
+    expect(getItem(db, unprocessedPid)?.outcomeReason).toBeNull();
+
+    await page.close();
+  });
+
+  it.each([
+    ['challenge', 'backloggd-challenge-page'] as const,
+    ['rate-limit', 'backloggd-rate-limit-page'] as const,
+  ])('stops after %s blocker and leaves later approved rows retryable', async (pageType, slug) => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    const blockedPid = randomUUID();
+    seedImportItem(db, {
+      proposalId: blockedPid,
+      steamAppId: 210,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: slug,
+      gameTitle: 'Blocked Page',
+    });
+
+    const unprocessedPid = randomUUID();
+    seedImportItem(db, {
+      proposalId: unprocessedPid,
+      steamAppId: 310,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-other-platforms',
+      gameTitle: 'BioShock',
+    });
+
+    const result = await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+    });
+
+    expect(result.sessionBlocker).toBe(pageType);
+    expect(result.unknown).toBe(1);
+    expect(result.leftImporting).toBe(0);
+
+    expect(getItem(db, blockedPid)?.status).toBe('failed');
+    expect(getItem(db, blockedPid)?.outcomeReason).toBe(`unknown:ownership:page-type:${pageType}`);
+    expect(getItem(db, unprocessedPid)?.status).toBe('approved');
+    expect(getItem(db, unprocessedPid)?.outcomeReason).toBeNull();
+
+    await page.close();
+  });
+
   // ===================================================================
   //  5. Browser disappearance → importing left
   // ===================================================================

@@ -26,6 +26,7 @@
     "import:propose": "node --import dotenv/config dist/cli/proposal-generate.js",
     "import:approve-exact": "node --import dotenv/config dist/cli/proposal-approve.js",
     "import:manifest": "node --import dotenv/config dist/cli/proposal-manifest.js",
+    "import:seed-items": "node --import dotenv/config dist/cli/import-seed-items.js",
     "backloggd:poc": "node --import dotenv/config dist/cli/backloggd-poc.js",
     "ownership:save": "node --import dotenv/config dist/cli/ownership-save.js",
     "ownership:confirm": "node --import dotenv/config dist/cli/ownership-confirm.js",

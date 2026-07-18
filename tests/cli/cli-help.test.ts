@@ -64,6 +64,11 @@ const cliEntries: CliHelpExpectation[] = [
     usagePattern: /Usage: npm run import:manifest/,
   },
   {
+    name: 'import:seed-items',
+    sourceName: 'import-seed-items',
+    usagePattern: /Usage: npm run import:seed-items/,
+  },
+  {
     name: 'ownership:compare',
     sourceName: 'ownership-compare',
     usagePattern: /Usage: npm run ownership:compare/,

@@ -15,16 +15,19 @@ operator-gated process.
 
 Before preparing a supervised dry run, confirm each item below.
 
-### Identify your session
+### Identify your session and export manifest
 
 The session ID identifies the import batch whose ownership proposals you
-intend to review.  Find it by running:
+intend to review.  Find it and export a manifest to a file by running:
 
 ```bash
-npm run import:manifest
+npm run import:manifest -- --session <id> --output <manifest.json>
 ```
 
-Look for the session ID printed at the top of the manifest output.
+The `import:manifest` command is read-only: it writes a manifest JSON file
+to the given output path and prints the session ID.  Use this manifest as
+input to `import:seed-items` in the next step.
+
 If manifest is unavailable, query the database directly
 (the default live database path is `./import.db`):
 
@@ -36,12 +39,14 @@ sqlite3 import.db "SELECT id, status, total_games FROM import_sessions;"
 
 Only the following commands are allowed in a read-only rehearsal:
 
-1. **Compare** (Step 1) — reads live Backloggd game pages.  Requires a
+1. **Seed import items** (Step 1) — creates/seeds `import_items` in the
+   local DB from an approved manifest.  No browser needed.
+2. **Compare** (Step 2) — reads live Backloggd game pages.  Requires a
    logged-in browser profile.  Exits nonzero if any unsafe outcomes
    (conflict, unknown, left-importing, malformed) are found.
-2. **Show plan** (Step 2) — shows the save plan from local DB only.
+3. **Show plan** (Step 3) — shows the save plan from local DB only.
    No browser needed.
-3. **Confirm proposals** (Step 3) — creates durable local confirmation
+4. **Confirm proposals** (Step 4) — creates durable local confirmation
    rows for eligible candidates.  No browser needed.  Only run this
    after manually reviewing the plan and choosing exact proposal IDs.
 
@@ -52,7 +57,7 @@ Only the following commands are allowed in a read-only rehearsal:
 npm run ownership:save -- --session <id> --execute-confirmed-ownership-saves
 ```
 
-The save command writes to Backloggd and is **not** part of this
+The save command (Step 5) writes to Backloggd and is **not** part of this
 rehearsal.  It will be used later in a supervised live-save slice.
 
 ### What to capture for review
@@ -79,6 +84,11 @@ rehearsal.  It will be used later in a supervised live-save slice.
 To abort the workflow at any point before the save step, simply stop
 running commands.  No cleanup is needed:
 
+- After **seed**: `import_items` rows exist but are local only — no
+  Backloggd side effects.  You can delete them via:
+  ```bash
+  sqlite3 ./import.db "DELETE FROM import_items WHERE import_session_id = '<id>';"
+  ```
 - After **compare**: no rows created, no Backloggd writes performed.
 - After **show-plan**: no state changed.
 - After **confirm**: local confirmation rows exist but do not affect
@@ -106,13 +116,50 @@ Before beginning the ownership workflow, all of the following must be true:
    profile exists at `.playwright/backloggd-profile` (or the location
    specified by `--profile-dir`).  You must have signed in to Backloggd at
    least once through this profile.
-4. **Approved ownership import items exist** — at least one
-   `proposal_kind = 'ownership'` item with `status = 'approved'` is present
-   in the `import_items` table for the session.
+4. **Approved ownership proposals exist** — at least one
+   `proposal_kind = 'ownership'` proposal with `status = 'approved'` is present
+   in the `proposals` table for the session.  These will be exported to a
+   manifest by `import:manifest` and then seeded into `import_items` by
+   `import:seed-items`.
 
 ---
 
-## Step 1 — Read-only comparison
+## Step 1 — Seed import items
+
+Populate the `import_items` table from an approved manifest.  This step
+is local-DB only and must run **before** any live comparison.
+
+```bash
+npm run import:seed-items -- --manifest <manifest.json>
+```
+
+### What it does
+
+- Reads the manifest JSON file produced by `import:manifest`.
+- Validates the manifest shape and drift-checks each proposal against the
+  current database state.
+- Creates `import_items` rows with `status = 'approved'` for every manifest
+  item that passes validation.
+
+### Local-only behavior
+
+- **No** confirmation rows are created.
+- **No** proposal statuses are altered.
+- **No** Playwright or browser code is imported or executed.
+- **No** Backloggd reads or writes are performed.
+- **No** final save is staged or executed.
+
+### Exit codes
+
+| Condition                  | Exit code |
+| -------------------------- | --------- |
+| All items seeded           | 0         |
+| Drift detected (rejected)  | 1         |
+| Invalid manifest           | 1         |
+
+---
+
+## Step 2 — Read-only comparison
 
 Compare the current Backloggd ownership state against the approved proposals.
 
@@ -155,7 +202,7 @@ is the only mutation performed by the comparison step.
 
 ---
 
-## Step 2 — Show plan
+## Step 3 — Show plan
 
 Display the ownership save plan for a session.  This step is **read-only**.
 
@@ -194,7 +241,7 @@ npm run ownership:confirm -- --session <id> --show-plan
 
 ---
 
-## Step 3 — Confirm candidates
+## Step 4 — Confirm candidates
 
 Record durable confirmation rows for eligible candidates.  No confirmation
 happens by default — you must explicitly choose one of the following actions.
@@ -234,7 +281,7 @@ npm run ownership:confirm -- --session <id> --confirm-all-eligible
 
 ---
 
-## Step 4 — Execute confirmed saves
+## Step 5 — Execute confirmed saves
 
 Apply the confirmed ownership changes to Backloggd.
 

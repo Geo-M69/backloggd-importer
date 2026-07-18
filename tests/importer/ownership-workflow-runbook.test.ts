@@ -104,6 +104,31 @@ describe('ownership-workflow runbook — command coverage', () => {
   it('explicitly forbids one-shot run-all in non-goals', () => {
     expect(RUNBOOK).toContain('No one-shot');
   });
+
+  // -----------------------------------------------------------------------
+  // Test 6c: Runbook lists import:manifest with --session and --output
+  // -----------------------------------------------------------------------
+  it('lists import:manifest with --session <id> and --output <manifest.json>', () => {
+    expect(RUNBOOK).toMatch(/npm run import:manifest -- --session <id> --output <manifest.json>/);
+  });
+
+  // -----------------------------------------------------------------------
+  // Test 6d: Runbook lists import:seed-items with --manifest <manifest.json>
+  // -----------------------------------------------------------------------
+  it('lists import:seed-items with --manifest <manifest.json>', () => {
+    expect(RUNBOOK).toMatch(/npm run import:seed-items -- --manifest <manifest.json>/);
+  });
+
+  // -----------------------------------------------------------------------
+  // Test 6e: import:seed-items appears before ownership:compare in the
+  //          operator flow (seeding must happen before live comparison)
+  // -----------------------------------------------------------------------
+  it('documents import:seed-items before ownership:compare in the operator flow', () => {
+    const seedIdx = RUNBOOK.indexOf('import:seed-items');
+    const compareIdx = RUNBOOK.indexOf('ownership:compare');
+    expect(seedIdx).toBeGreaterThanOrEqual(0);
+    expect(compareIdx).toBeGreaterThan(seedIdx);
+  });
 });
 
 // ---------------------------------------------------------------------------

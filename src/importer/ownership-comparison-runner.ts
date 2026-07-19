@@ -51,6 +51,10 @@ export interface OwnershipComparisonRunnerResult {
   unsupportedKind: number;
   /** Session-level blocker that stopped further processing, if detected. */
   sessionBlocker?: 'login' | 'challenge' | 'rate-limit';
+  /** True when --max-items caused a clean stop before all items were processed. */
+  completedDueToBatchLimit?: boolean;
+  /** Breakdown of unsupported-read failure reasons (diagnostic notes → count). */
+  unsupportedReadDetailCounts?: Record<string, number>;
 }
 
 export interface OwnershipComparisonRunnerOptions {
@@ -70,6 +74,20 @@ export interface OwnershipComparisonRunnerOptions {
    * `(item) => \`file:///fixtures/${slug}.html\``.
    */
   resolvePageUrl?: (slug: string, item: ImportItem) => string;
+  /**
+   * Maximum number of approved ownership items to process in this run.
+   * Items beyond the limit remain approved and retryable.
+   * Must be a positive integer.
+   */
+  maxItems?: number;
+  /**
+   * Delay in milliseconds between slug group page reads.
+   * Helps avoid rate-limiting under aggressive re-reads.
+   * Must be a non-negative integer.
+   */
+  delayMs?: number;
+  /** Injectable sleep function for testing. Defaults to `setTimeout`-based delay. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -147,6 +165,7 @@ function applyComparisonResult(
   proposalId: string,
   classification: string,
   reasonCode: string,
+  diagnosticNotes?: string[],
 ): void {
   switch (classification) {
     case 'already-present': {
@@ -173,9 +192,12 @@ function applyComparisonResult(
       break;
     }
     case 'unknown': {
+      const lastError = diagnosticNotes?.length
+        ? sanitizeReason(diagnosticNotes[0].substring(0, 200))
+        : sanitizeReason(`Unknown: ownership ${reasonCode}`);
       transitionItem(db, proposalId, 'failed', {
         outcomeReason: sanitizeReason(`unknown:ownership:${reasonCode}`),
-        lastError: sanitizeReason(`Unknown: ownership ${reasonCode}`),
+        lastError,
       });
       break;
     }
@@ -189,6 +211,10 @@ function applyComparisonResult(
       });
     }
   }
+}
+
+async function defaultSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ---------------------------------------------------------------------------
@@ -229,6 +255,7 @@ export async function runOwnershipComparison(
 ): Promise<OwnershipComparisonRunnerResult> {
   const { db, sessionId, page, timeout } = options;
   const resolvePageUrl = options.resolvePageUrl ?? defaultResolvePageUrl;
+  const sleep = options.sleep ?? defaultSleep;
 
   const result: OwnershipComparisonRunnerResult = {
     processed: 0,
@@ -252,6 +279,16 @@ export async function runOwnershipComparison(
   result.unsupportedKind = nonOwnershipItems.length;
 
   if (ownershipItems.length === 0) {
+    return result;
+  }
+
+  // -------------------------------------------------------------------------
+  // 1b. Apply maxItems limit — slice approved items to the requested batch size
+  // -------------------------------------------------------------------------
+  const itemsToProcess =
+    options.maxItems !== undefined ? ownershipItems.slice(0, options.maxItems) : ownershipItems;
+
+  if (itemsToProcess.length === 0) {
     return result;
   }
 
@@ -284,7 +321,7 @@ export async function runOwnershipComparison(
   }
   const validatedItems: ValidatedItem[] = [];
 
-  for (const item of ownershipItems) {
+  for (const item of itemsToProcess) {
     // -----------------------------------------------------------------------
     // Phase A — Pre-payload metadata validation (no slug)
     // -----------------------------------------------------------------------
@@ -425,7 +462,13 @@ export async function runOwnershipComparison(
   // -------------------------------------------------------------------------
   // 4. Process each slug group
   // -------------------------------------------------------------------------
+  let isFirstSlugGroup = true;
   for (const [slug, slugItems] of bySlug) {
+    // Delay before each group except the first (pacing between page reads)
+    if (!isFirstSlugGroup && options.delayMs !== undefined && options.delayMs > 0) {
+      await sleep(options.delayMs);
+    }
+    isFirstSlugGroup = false;
     // 4a. Re-check each item is still approved (defensive — avoid races)
     const stillApproved = slugItems.filter((vi) => {
       const fresh = getItem(db, vi.item.proposalId);
@@ -495,13 +538,30 @@ export async function runOwnershipComparison(
       // Proposal was already parsed and validated in step 2 (Finding 1)
       const comparison = compareOwnership(vi.proposal, visibleState.library);
 
+      // Capture diagnostic notes from visible-state reader
+      const diagnosticNotes =
+        comparison.reasonCode === 'unsupported-read' ? visibleState.diagnostics.notes : undefined;
+
       // Apply result
       applyComparisonResult(
         db,
         vi.item.proposalId,
         comparison.classification,
         comparison.reasonCode,
+        diagnosticNotes,
       );
+
+      // Accumulate unsupported-read diagnostic detail breakdown
+      if (
+        comparison.reasonCode === 'unsupported-read' &&
+        diagnosticNotes &&
+        diagnosticNotes.length > 0
+      ) {
+        result.unsupportedReadDetailCounts ??= {};
+        const noteKey = sanitizeReason(diagnosticNotes[0].substring(0, 80));
+        result.unsupportedReadDetailCounts[noteKey] =
+          (result.unsupportedReadDetailCounts[noteKey] ?? 0) + 1;
+      }
 
       // Tally
       switch (comparison.classification) {
@@ -523,6 +583,18 @@ export async function runOwnershipComparison(
       }
       result.processed++;
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // 4h. Mark batch-limit completion if maxItems was active and we stopped
+  //     cleanly (no session blocker) with items remaining unprocessed.
+  // -------------------------------------------------------------------------
+  if (
+    options.maxItems !== undefined &&
+    !result.sessionBlocker &&
+    ownershipItems.length > options.maxItems
+  ) {
+    result.completedDueToBatchLimit = true;
   }
 
   // -------------------------------------------------------------------------

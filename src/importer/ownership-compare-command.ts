@@ -59,6 +59,16 @@ export interface OwnershipCompareCommandOptions {
    * Tests override this to point at fixture files.
    */
   resolvePageUrl?: (slug: string, item: ImportItem) => string;
+  /**
+   * Maximum number of approved ownership items to process.
+   * Items beyond the limit remain approved and retryable.
+   */
+  maxItems?: number;
+  /**
+   * Delay in milliseconds between slug group page reads.
+   * Helps avoid rate-limiting.
+   */
+  delayMs?: number;
 }
 
 /**
@@ -159,6 +169,8 @@ export async function runOwnershipCompareCommand(
     page: options.page,
     timeout: options.timeout,
     resolvePageUrl: options.resolvePageUrl,
+    maxItems: options.maxItems,
+    delayMs: options.delayMs,
   };
 
   const result = await runOwnershipComparison(runnerOptions);
@@ -209,15 +221,49 @@ export function formatCompareResult(result: OwnershipCompareResult): string {
   lines.push(formatStatusLine('Change needed', result.changeNeeded));
   lines.push(formatStatusLine('Conflict', result.conflict));
   lines.push(formatStatusLine('Unknown', result.unknown));
+
+  // Unsupported-read detail breakdown
+  if (result.unsupportedReadDetailCounts) {
+    const entries = Object.entries(result.unsupportedReadDetailCounts);
+    for (const [note, count] of entries) {
+      lines.push(formatStatusLine(`  \\_ ${note}`, count));
+    }
+  }
+
   lines.push(formatStatusLine('Left importing', result.leftImporting));
   lines.push(formatStatusLine('Malformed', result.malformed));
   lines.push(formatStatusLine('Unsupported kind', result.unsupportedKind));
+
   if (result.sessionBlocker) {
     lines.push('');
     lines.push(`Session blocker: page-type:${result.sessionBlocker}`);
-    lines.push(
-      'Fix the browser profile or Backloggd access state, then retry only the matching local compare failures.',
-    );
+    if (result.sessionBlocker === 'rate-limit') {
+      lines.push('Backloggd rate limit detected. Allow cooldown before retrying.');
+    } else if (result.sessionBlocker === 'login') {
+      lines.push('Login required. Sign in via the browser window, then retry.');
+    } else {
+      lines.push(
+        'Fix the browser profile or Backloggd access state, then retry only the matching local compare failures.',
+      );
+    }
+  }
+
+  if (result.completedDueToBatchLimit) {
+    lines.push('');
+    lines.push('Batch limit reached. Remaining approved items were not processed.');
+    lines.push('Run again without --max-items or increase the limit to process more items.');
+  }
+
+  // Next-step recommendation for clean completions
+  if (result.processed > 0 && !result.sessionBlocker && !result.completedDueToBatchLimit) {
+    lines.push('');
+    if (result.changeNeeded > 0) {
+      lines.push(
+        'Next step: review change-needed candidates, then run ownership:confirm --show-plan to review before confirming.',
+      );
+    } else if (result.alreadyPresent > 0) {
+      lines.push('All processed items are already synced. No save is needed.');
+    }
   }
 
   return lines.join('\n');

@@ -442,6 +442,263 @@ describe('ownership-compare CLI — executable behaviour', () => {
   });
 
   // ===================================================================
+  //  21-23. --max-items validation
+  // ===================================================================
+
+  it('returns nonzero when --max-items value is not a number', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', 'abc'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --max-items value is zero', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', '0'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --max-items value is negative', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', '-5'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('does not call launchSession when --max-items is invalid', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--max-items', 'abc'], deps);
+    expect(calls.launchSession).not.toHaveBeenCalled();
+  });
+
+  it('does not call runOwnershipCompareCommand when --max-items is invalid', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--max-items', 'abc'], deps);
+    expect(calls.runOwnershipCompareCommand).not.toHaveBeenCalled();
+  });
+
+  // --- Additional --max-items strict-parsing rejections ---
+
+  it('returns nonzero when --max-items value is 1abc', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', '1abc'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --max-items value is 1.5', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', '1.5'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --max-items value is +1', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', '+1'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --max-items value is -1', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', '-1'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --max-items value is blank', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items', ''],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --max-items flag has no value', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--max-items'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('does not call resolveImportDbPath when --max-items value is 1abc', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--max-items', '1abc'], deps);
+    expect(calls.resolveImportDbPath).not.toHaveBeenCalled();
+  });
+
+  it('does not call openDatabase when --max-items value is 1abc', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--max-items', '1abc'], deps);
+    expect(calls.openDatabase).not.toHaveBeenCalled();
+  });
+
+  // ===================================================================
+  //  24-26. --delay-ms validation
+  // ===================================================================
+
+  it('returns nonzero when --delay-ms value is not a number', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--delay-ms', 'abc'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --delay-ms value is negative', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--delay-ms', '-1'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('does not call launchSession when --delay-ms is invalid', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--delay-ms', 'abc'], deps);
+    expect(calls.launchSession).not.toHaveBeenCalled();
+  });
+
+  it('does not call runOwnershipCompareCommand when --delay-ms is invalid', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--delay-ms', 'abc'], deps);
+    expect(calls.runOwnershipCompareCommand).not.toHaveBeenCalled();
+  });
+
+  // --- Additional --delay-ms strict-parsing rejections ---
+
+  it('returns nonzero when --delay-ms value is 250ms', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--delay-ms', '250ms'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --delay-ms value is 1.5', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--delay-ms', '1.5'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --delay-ms value is +1', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--delay-ms', '+1'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --delay-ms value is blank', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--delay-ms', ''],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('returns nonzero when --delay-ms flag has no value', async () => {
+    const { deps } = createFakeDeps();
+    const exitCode = await runOwnershipCompareCli(
+      ['--session', 'test-session', '--delay-ms'],
+      deps,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('does not call resolveImportDbPath when --delay-ms value is 250ms', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--delay-ms', '250ms'], deps);
+    expect(calls.resolveImportDbPath).not.toHaveBeenCalled();
+  });
+
+  it('does not call openDatabase when --delay-ms value is 250ms', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--session', 'test-session', '--delay-ms', '250ms'], deps);
+    expect(calls.openDatabase).not.toHaveBeenCalled();
+  });
+
+  // ===================================================================
+  //  27-28. Valid batch/pacing flags passed to command
+  // ===================================================================
+
+  it('passes --max-items to runOwnershipCompareCommand', async () => {
+    const { deps, calls } = createFakeDeps();
+    calls.countApprovedOwnershipItems.mockReturnValue(1);
+
+    await runOwnershipCompareCli(['--session', 'test-session', '--max-items', '10'], deps);
+
+    expect(calls.runOwnershipCompareCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ maxItems: 10 }),
+    );
+  });
+
+  it('passes --delay-ms to runOwnershipCompareCommand', async () => {
+    const { deps, calls } = createFakeDeps();
+    calls.countApprovedOwnershipItems.mockReturnValue(1);
+
+    await runOwnershipCompareCli(['--session', 'test-session', '--delay-ms', '1500'], deps);
+
+    expect(calls.runOwnershipCompareCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ delayMs: 1500 }),
+    );
+  });
+
+  it('passes --delay-ms 0 to runOwnershipCompareCommand', async () => {
+    const { deps, calls } = createFakeDeps();
+    calls.countApprovedOwnershipItems.mockReturnValue(1);
+
+    await runOwnershipCompareCli(['--session', 'test-session', '--delay-ms', '0'], deps);
+
+    expect(calls.runOwnershipCompareCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ delayMs: 0 }),
+    );
+  });
+
+  // ===================================================================
+  //  29. Help text documents new flags
+  // ===================================================================
+
+  it('help text mentions --max-items', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--help'], deps);
+    expect(calls.consoleLog).toHaveBeenCalledWith(expect.stringContaining('--max-items'));
+  });
+
+  it('help text mentions --delay-ms', async () => {
+    const { deps, calls } = createFakeDeps();
+    await runOwnershipCompareCli(['--help'], deps);
+    expect(calls.consoleLog).toHaveBeenCalledWith(expect.stringContaining('--delay-ms'));
+  });
+
+  // ===================================================================
   //  18. Approved-work path calls shared launchSession
   // ===================================================================
 

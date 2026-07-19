@@ -19,7 +19,7 @@
  *   15. change-needed remains available for Phase 5C.
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
@@ -1232,6 +1232,209 @@ describe('ownership-comparison-runner', () => {
     const item = getItem(db, proposalId);
     expect(item?.status).toBe('failed');
     expect(item?.outcomeReason).toBe('malformed:ownership:invalid-payload');
+
+    await page.close();
+  });
+
+  // ===================================================================
+  //  Phase 5F Slice 4p — maxItems, delayMs, batch-limit, diagnostics
+  // ===================================================================
+
+  it('processes only maxItems approved ownership items', async () => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    // Three items with distinct slugs, each mapping to a valid fixture
+    const pid1 = randomUUID();
+    seedImportItem(db, {
+      proposalId: pid1,
+      steamAppId: 440,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-steam-digital-present',
+      gameTitle: 'Team Fortress 2',
+    });
+
+    const pid2 = randomUUID();
+    seedImportItem(db, {
+      proposalId: pid2,
+      steamAppId: 441,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-other-platforms',
+      gameTitle: 'BioShock',
+    });
+
+    const pid3 = randomUUID();
+    seedImportItem(db, {
+      proposalId: pid3,
+      steamAppId: 442,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-button-based',
+      gameTitle: 'Breath of the Wild',
+    });
+
+    const result = await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+      maxItems: 2,
+    });
+
+    // Only 2 items should be processed
+    expect(result.processed).toBe(2);
+    expect(result.completedDueToBatchLimit).toBe(true);
+
+    // Item 3 should remain approved
+    const item3 = getItem(db, pid3);
+    expect(item3?.status).toBe('approved');
+
+    await page.close();
+  });
+
+  it('completedDueToBatchLimit is false when maxItems not specified', async () => {
+    const { result, page } = await runForFixture(
+      'backloggd-ownership-steam-digital-present.html',
+      'Team Fortress 2',
+      440,
+      [{ frozenPayload: STEAM_DIGITAL_PAYLOAD }],
+    );
+
+    expect(result.completedDueToBatchLimit).toBeUndefined();
+
+    await page.close();
+  });
+
+  it('completedDueToBatchLimit is false when session blocker stops processing under maxItems', async () => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    // A login-blocked page first, then a valid page after
+    const blockedPid = randomUUID();
+    seedImportItem(db, {
+      proposalId: blockedPid,
+      steamAppId: 200,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-login-page',
+      gameTitle: 'Blocked Page',
+    });
+
+    const unprocessedPid = randomUUID();
+    seedImportItem(db, {
+      proposalId: unprocessedPid,
+      steamAppId: 300,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-other-platforms',
+      gameTitle: 'BioShock',
+    });
+
+    const result = await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+      maxItems: 5,
+    });
+
+    // Session blocker present → completedDueToBatchLimit must be false
+    expect(result.sessionBlocker).toBe('login');
+    expect(result.completedDueToBatchLimit).toBeFalsy();
+    expect(result.unknown).toBe(1);
+    expect(getItem(db, unprocessedPid)?.status).toBe('approved');
+
+    await page.close();
+  });
+
+  it('delayMs is honored through injectable sleep', async () => {
+    const page = await context.newPage();
+    await installWriteGuard(page);
+
+    const sleep = vi.fn().mockResolvedValue(undefined);
+
+    const pid1 = randomUUID();
+    seedImportItem(db, {
+      proposalId: pid1,
+      steamAppId: 440,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-steam-digital-present',
+      gameTitle: 'Team Fortress 2',
+    });
+
+    const pid2 = randomUUID();
+    seedImportItem(db, {
+      proposalId: pid2,
+      steamAppId: 441,
+      frozenPayload: STEAM_DIGITAL_PAYLOAD,
+      status: 'approved',
+      backloggdSlug: 'backloggd-ownership-other-platforms',
+      gameTitle: 'BioShock',
+    });
+
+    await runOwnershipComparison({
+      db,
+      sessionId: 'test-session',
+      page,
+      timeout: 2000,
+      resolvePageUrl: resolveFixturePageUrl,
+      delayMs: 500,
+      sleep,
+    });
+
+    // With 2 distinct slugs, sleep should be called once (after first slug group)
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(sleep).toHaveBeenCalledWith(500);
+
+    await page.close();
+  });
+
+  it('does not call sleep when delayMs is not specified', async () => {
+    const { result, page } = await runForFixture(
+      'backloggd-ownership-steam-digital-present.html',
+      'Team Fortress 2',
+      440,
+      [{ frozenPayload: STEAM_DIGITAL_PAYLOAD }],
+    );
+
+    // sleep was not injected — no delay occurred
+    expect(result.processed).toBe(1);
+
+    await page.close();
+  });
+
+  it('unsupportedReadDetailCounts captures diagnostic notes for unsupported-read', async () => {
+    const { result, page } = await runForFixture(
+      'backloggd-ownership-generic.html',
+      'Portal 2',
+      620,
+      [{ frozenPayload: STEAM_DIGITAL_PAYLOAD }],
+    );
+
+    expect(result.unknown).toBe(1);
+    expect(result.unsupportedReadDetailCounts).toBeDefined();
+    // The generic fixture should produce at least one unsupported-read diagnostic note
+    const entries = Object.entries(result.unsupportedReadDetailCounts ?? {});
+    expect(entries.length).toBeGreaterThanOrEqual(1);
+
+    await page.close();
+  });
+
+  it('does not populate unsupportedReadDetailCounts for non-unsupported failures', async () => {
+    const { result, page } = await runForFixture(
+      'backloggd-ownership-steam-digital-present.html',
+      'Team Fortress 2',
+      440,
+      [{ frozenPayload: STEAM_DIGITAL_PAYLOAD }],
+    );
+
+    expect(result.alreadyPresent).toBe(1);
+    expect(result.unsupportedReadDetailCounts).toBeUndefined();
 
     await page.close();
   });

@@ -378,6 +378,66 @@ describe('ownership-compare-command', () => {
     );
   });
 
+  it('forwards maxItems to the comparison runner', async () => {
+    mockRunOwnershipComparison.mockResolvedValue({
+      processed: 0,
+      alreadyPresent: 0,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 0,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+    });
+
+    seedImportItem(db, {
+      proposalKind: 'ownership',
+      status: 'approved',
+      backloggdSlug: 'test-game',
+    });
+
+    await runOwnershipCompareCommand({
+      db,
+      sessionId: 'test-session',
+      page: mockPage,
+      maxItems: 5,
+    });
+
+    expect(mockRunOwnershipComparison).toHaveBeenCalledWith(
+      expect.objectContaining({ maxItems: 5 }),
+    );
+  });
+
+  it('forwards delayMs to the comparison runner', async () => {
+    mockRunOwnershipComparison.mockResolvedValue({
+      processed: 0,
+      alreadyPresent: 0,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 0,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+    });
+
+    seedImportItem(db, {
+      proposalKind: 'ownership',
+      status: 'approved',
+      backloggdSlug: 'test-game',
+    });
+
+    await runOwnershipCompareCommand({
+      db,
+      sessionId: 'test-session',
+      page: mockPage,
+      delayMs: 2000,
+    });
+
+    expect(mockRunOwnershipComparison).toHaveBeenCalledWith(
+      expect.objectContaining({ delayMs: 2000 }),
+    );
+  });
+
   // ===================================================================
   //  5. Unapproved ownership items are not counted
   // ===================================================================
@@ -645,12 +705,165 @@ describe('ownership-compare-command', () => {
     });
 
     expect(output).toContain('Session blocker: page-type:login');
-    expect(output).toContain('Fix the browser profile or Backloggd access state');
-    expect(output).toContain('retry only the matching local compare failures');
+    expect(output).toContain('Sign in');
   });
 
   // ===================================================================
-  //  11. Integration does not create confirmation rows (static assertion)
+  //  11. formatCompareResult — batch-limit and diagnostics output
+  // ===================================================================
+
+  it('formats batch-limit completion message', () => {
+    const output = formatCompareResult({
+      processed: 5,
+      alreadyPresent: 3,
+      changeNeeded: 2,
+      conflict: 0,
+      unknown: 0,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+      completedDueToBatchLimit: true,
+    });
+
+    expect(output).toContain('Batch limit reached');
+    expect(output).toContain('increase the limit');
+  });
+
+  it('does not show batch-limit message when flag is false', () => {
+    const output = formatCompareResult({
+      processed: 5,
+      alreadyPresent: 3,
+      changeNeeded: 2,
+      conflict: 0,
+      unknown: 0,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+    });
+
+    expect(output).not.toContain('Batch limit');
+  });
+
+  it('formats unsupported-read detail breakdown', () => {
+    const output = formatCompareResult({
+      processed: 3,
+      alreadyPresent: 0,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 3,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+      unsupportedReadDetailCounts: {
+        no_visible_library_region: 2,
+        ambiguous_button_state: 1,
+      },
+    });
+
+    expect(output).toContain('no_visible_library_region');
+    expect(output).toContain('ambiguous_button_state');
+    expect(output).toContain('\\_');
+  });
+
+  it('formats rate-limit specific blocker message', () => {
+    const output = formatCompareResult({
+      processed: 0,
+      alreadyPresent: 0,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 1,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+      sessionBlocker: 'rate-limit',
+    });
+
+    expect(output).toContain('page-type:rate-limit');
+    expect(output).toContain('cooldown');
+  });
+
+  it('formats login specific blocker message', () => {
+    const output = formatCompareResult({
+      processed: 0,
+      alreadyPresent: 0,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 1,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+      sessionBlocker: 'login',
+    });
+
+    expect(output).toContain('page-type:login');
+    expect(output).toContain('Sign in');
+  });
+
+  it('shows next-step for change-needed on clean completion', () => {
+    const output = formatCompareResult({
+      processed: 3,
+      alreadyPresent: 1,
+      changeNeeded: 2,
+      conflict: 0,
+      unknown: 0,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+    });
+
+    expect(output).toContain('Next step');
+    expect(output).toContain('confirm');
+  });
+
+  it('shows all-synced message when all processed are already-present', () => {
+    const output = formatCompareResult({
+      processed: 3,
+      alreadyPresent: 3,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 0,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+    });
+
+    expect(output).toContain('already synced');
+  });
+
+  it('does not show next-step for session-blocker result', () => {
+    const output = formatCompareResult({
+      processed: 1,
+      alreadyPresent: 0,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 1,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+      sessionBlocker: 'rate-limit',
+    });
+
+    expect(output).not.toContain('Next step');
+  });
+
+  it('does not show next-step for batch-limit result', () => {
+    const output = formatCompareResult({
+      processed: 3,
+      alreadyPresent: 3,
+      changeNeeded: 0,
+      conflict: 0,
+      unknown: 0,
+      leftImporting: 0,
+      malformed: 0,
+      unsupportedKind: 0,
+      completedDueToBatchLimit: true,
+    });
+
+    expect(output).not.toContain('Next step');
+  });
+
+  // ===================================================================
+  //  12. Integration does not create confirmation rows (static assertion)
   // ===================================================================
 
   it('does not call applyOwnershipConfirmationSelection (runtime proof)', async () => {

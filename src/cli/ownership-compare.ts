@@ -13,6 +13,8 @@
  *   --profile-dir <path>    Optional. Persistent browser profile directory.
  *                           Default: .playwright/backloggd-profile
  *   --headless              Optional. Run browser in headless mode.
+ *   --max-items <n>         Optional. Maximum approved items to process per run.
+ *   --delay-ms <n>          Optional. Delay in ms between page reads.
  *
  * Safety:
  *   This command is read-only with respect to Backloggd final actions.
@@ -55,6 +57,13 @@ function getFlagValue(args: readonly string[], flag: string): string | undefined
 
 function hasFlag(args: readonly string[], flag: string): boolean {
   return args.includes(flag);
+}
+
+function parseStrictIntegerFlag(value: string, _flagName: string): number | null {
+  if (!/^[0-9]+$/.test(value)) return null;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) return null;
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -127,6 +136,12 @@ export async function runOwnershipCompareCli(
     deps.consoleLog('  --profile-dir <path>    Optional. Persistent browser profile directory.');
     deps.consoleLog('                          Default: .playwright/backloggd-profile');
     deps.consoleLog('  --headless              Optional. Run browser in headless mode.');
+    deps.consoleLog(
+      '  --max-items <n>         Optional. Max approved items to process. Must be positive integer.',
+    );
+    deps.consoleLog(
+      '  --delay-ms <n>          Optional. Delay (ms) between page reads. Must be nonnegative integer.',
+    );
     return 0;
   }
 
@@ -146,6 +161,37 @@ export async function runOwnershipCompareCli(
     getFlagValue(argv, '--profile-dir') ?? '.playwright/backloggd-profile',
   );
   const headless = hasFlag(argv, '--headless');
+
+  // --- Parse batch/pacing flags ---
+  const rawMaxItems = getFlagValue(argv, '--max-items');
+  let maxItems: number | undefined;
+  if (hasFlag(argv, '--max-items')) {
+    if (rawMaxItems === undefined) {
+      deps.consoleError('Error: --max-items must be a positive integer.');
+      return 1;
+    }
+    const parsed = parseStrictIntegerFlag(rawMaxItems, '--max-items');
+    if (parsed === null || parsed < 1) {
+      deps.consoleError('Error: --max-items must be a positive integer.');
+      return 1;
+    }
+    maxItems = parsed;
+  }
+
+  const rawDelayMs = getFlagValue(argv, '--delay-ms');
+  let delayMs: number | undefined;
+  if (hasFlag(argv, '--delay-ms')) {
+    if (rawDelayMs === undefined) {
+      deps.consoleError('Error: --delay-ms must be a nonnegative integer.');
+      return 1;
+    }
+    const parsed = parseStrictIntegerFlag(rawDelayMs, '--delay-ms');
+    if (parsed === null || parsed < 0) {
+      deps.consoleError('Error: --delay-ms must be a nonnegative integer.');
+      return 1;
+    }
+    delayMs = parsed;
+  }
 
   // --- Resolve database ---
   const { dbPath } = deps.resolveImportDbPath(process.env);
@@ -176,6 +222,8 @@ export async function runOwnershipCompareCli(
         db,
         sessionId,
         page,
+        maxItems,
+        delayMs,
       });
 
       deps.consoleLog('\n--- Result ---');

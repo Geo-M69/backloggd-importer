@@ -49,6 +49,10 @@ export interface ComparisonLibrarySummary {
   membership: 'present' | 'absent' | 'unknown';
   ownershipEntries: ComparisonVisibleEntry[];
   addControl: 'unique' | 'absent' | 'ambiguous';
+  buttonStatus?: {
+    value: string;
+    evidence: 'btn-play-fill' | 'aria-pressed';
+  };
 }
 
 export interface ComparisonResult {
@@ -202,6 +206,31 @@ export function compareOwnership(
   const notes: string[] = [];
   const normalizedProposalPlatform = canonicalizePlatform(proposal.platform) ?? '';
   const normalizedProposalOwnership = canonicalizeOwnership(proposal.ownershipType) ?? '';
+  const normalizedRequestedStatus = normalizeSurfaceText(proposal.ownershipType) ?? '';
+
+  if (
+    library.membership === 'present' &&
+    library.completeness === 'complete' &&
+    library.ownershipEntries.length === 0 &&
+    normalizedProposalPlatform !== '' &&
+    library.buttonStatus?.value === 'Played' &&
+    normalizeSurfaceText(library.buttonStatus.value) === normalizedRequestedStatus
+  ) {
+    notes.push(`button-status-match:${library.buttonStatus.value}`);
+    notes.push(`button-status-evidence:${library.buttonStatus.evidence}`);
+    return {
+      classification: 'already-present',
+      reasonCode: 'button-status-match',
+      relevantEntries: [],
+      safeForTransition: true,
+      diagnostics: {
+        normalizedProposalPlatform,
+        normalizedProposalOwnership: normalizedRequestedStatus,
+        matchedEntryIndices: [],
+        notes,
+      },
+    };
+  }
 
   if (normalizedProposalPlatform === '' || normalizedProposalOwnership === '') {
     notes.push('proposal-not-in-strict-whitelist');

@@ -12,12 +12,20 @@
     <h1 hidden>Log a Game</h1>
     <h1>Hollow Knight</h1>
 
-    <!-- All buttons present but none are pressed/active -->
+    <!-- All buttons present but none are filled/active -->
     <section class="game-status-buttons">
-      <button type="button" class="status-btn" aria-pressed="false">Played</button>
-      <button type="button" class="status-btn" aria-pressed="false">Playing</button>
-      <button type="button" class="status-btn" aria-pressed="false">Backlog</button>
-      <button type="button" class="status-btn" aria-pressed="false">Wishlist</button>
+      <div class="played-btn-container col px-0 mt-auto">
+        <button type="button" class="button-link btn-play mx-auto">Played</button>
+      </div>
+      <div class="playing-btn-container col px-0 mt-auto">
+        <button type="button" class="button-link btn-play mx-auto">Playing</button>
+      </div>
+      <div class="backlog-btn-container col px-0 mt-auto">
+        <button type="button" class="button-link btn-play mx-auto">Backlog</button>
+      </div>
+      <div class="wishlist-btn-container col px-0 mt-auto">
+        <button type="button" class="button-link btn-play mx-auto">Wishlist</button>
+      </div>
     </section>
   </main>
 </body>

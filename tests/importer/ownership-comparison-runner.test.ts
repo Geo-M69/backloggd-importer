@@ -39,6 +39,7 @@ import { installWriteGuard } from '../../src/backloggd/browser.js';
 const FIXTURES_DIR = resolve('fixtures');
 
 const STEAM_DIGITAL_PAYLOAD = '{"platform":"steam","ownershipType":"digital"}';
+const STEAM_PLAYED_PAYLOAD = '{"platform":"steam","ownershipType":"Played"}';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -287,6 +288,29 @@ describe('ownership-comparison-runner', () => {
       'Team Fortress 2',
       440,
       [{ frozenPayload: STEAM_DIGITAL_PAYLOAD }],
+    );
+
+    expect(result.processed).toBe(1);
+    expect(result.alreadyPresent).toBe(1);
+    expect(result.changeNeeded).toBe(0);
+    expect(result.conflict).toBe(0);
+    expect(result.unknown).toBe(0);
+    expect(result.leftImporting).toBe(0);
+    expect(result.malformed).toBe(0);
+
+    const item = getItem(db, proposalIds[0]);
+    expect(item?.status).toBe('skipped');
+    expect(item?.outcomeReason).toBe('already-present:ownership');
+
+    await page.close();
+  });
+
+  it('marks filled Played button-state match as skipped without save eligibility', async () => {
+    const { result, page, proposalIds } = await runForFixture(
+      'backloggd-ownership-button-based.html',
+      'The Legend of Zelda: Breath of the Wild',
+      440,
+      [{ frozenPayload: STEAM_PLAYED_PAYLOAD }],
     );
 
     expect(result.processed).toBe(1);

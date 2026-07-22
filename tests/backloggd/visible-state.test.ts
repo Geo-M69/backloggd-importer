@@ -22,6 +22,7 @@ async function openFixture(context: BrowserContext, fileName: string) {
 }
 
 const STEAM_DIGITAL = { platform: 'Steam', ownershipType: 'Digital' };
+const STEAM_PLAYED = { platform: 'Steam', ownershipType: 'Played' };
 
 describe('readVisibleBackloggdState — fixture coverage', () => {
   let browser: Browser;
@@ -811,7 +812,7 @@ describe('readVisibleBackloggdState — fixture coverage', () => {
   // -----------------------------------------------------------------------
 
   describe('button-based Backloggd logged-in UI', () => {
-    it('returns non-unsupported state when a trustworthy active status button is visible', async () => {
+    it('returns present state when a visible enabled Played container has btn-play-fill', async () => {
       const state = await readFixture(
         'backloggd-ownership-button-based.html',
         'The Legend of Zelda: Breath of the Wild',
@@ -829,16 +830,25 @@ describe('readVisibleBackloggdState — fixture coverage', () => {
       // The active status must be captured.
       expect(state.status.value).toBe('Played');
       expect(state.status.evidence).toBe('explicit-value');
+      expect(state.library.buttonStatus).toEqual({
+        value: 'Played',
+        evidence: 'btn-play-fill',
+      });
       // Diagnostics must contain the button-based note.
       expect(state.diagnostics.notes).toContain('button-based-status:Played');
+      expect(state.diagnostics.notes).toContain('button-based-evidence:btn-play-fill');
 
-      // The comparator must NOT return unsupported-read.
+      const playedResult = compareOwnership(STEAM_PLAYED, state.library);
+      expect(playedResult.classification).toBe('already-present');
+      expect(playedResult.reasonCode).toBe('button-status-match');
+
+      // A filled status alone must not create save-eligible absent proof for
+      // ordinary Steam/Digital ownership.
       const result = compareOwnership(STEAM_DIGITAL, state.library);
       expect(result.reasonCode).not.toBe('unsupported-read');
-      // Without platform/ownership detail, the comparator must still return
-      // unknown (never change-needed for ambiguous membership).
       expect(result.classification).toBe('unknown');
       expect(result.reasonCode).toBe('no-safe-add-path');
+      expect(result.classification).not.toBe('change-needed');
     });
 
     it('hidden Log a Game h1 is ignored for title verification', async () => {
@@ -852,7 +862,7 @@ describe('readVisibleBackloggdState — fixture coverage', () => {
       expect(state.game.visibleTitle).toBe('The Legend of Zelda: Breath of the Wild');
     });
 
-    it('ambiguous button state (no button pressed) returns unsupported', async () => {
+    it('unfilled all-four button state returns unsupported without absent proof', async () => {
       const state = await readFixture(
         'backloggd-ownership-button-based-ambiguous.html',
         'Hollow Knight',
@@ -863,10 +873,46 @@ describe('readVisibleBackloggdState — fixture coverage', () => {
       expect(state.library.membership).toBe('unknown');
       expect(state.status.evidence).toBe('unknown');
       expect(state.diagnostics.notes).toContain('no-visible-library-region');
+      expect(state.diagnostics.notes).toContain('ambiguous-button-state:no-filled-status');
 
       const result = compareOwnership(STEAM_DIGITAL, state.library);
       expect(result.classification).toBe('unknown');
       expect(result.reasonCode).toBe('unsupported-read');
+      expect(result.classification).not.toBe('change-needed');
+    });
+
+    it('multiple filled status containers return unsupported without save eligibility', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-multiple-filled.html',
+        'Hollow Knight',
+        'backloggd-ownership-button-based-multiple-filled',
+      );
+      expect(state.library.completeness).toBe('unsupported');
+      expect(state.library.membership).toBe('unknown');
+      expect(state.status.evidence).toBe('unknown');
+      expect(state.diagnostics.notes).toContain('ambiguous-button-state:multiple-filled-status');
+
+      const result = compareOwnership(STEAM_DIGITAL, state.library);
+      expect(result.classification).toBe('unknown');
+      expect(result.reasonCode).toBe('unsupported-read');
+      expect(result.classification).not.toBe('change-needed');
+    });
+
+    it('hidden filled status container is ignored and remains unsupported', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-hidden-filled.html',
+        'Hollow Knight',
+        'backloggd-ownership-button-based-hidden-filled',
+      );
+      expect(state.library.completeness).toBe('unsupported');
+      expect(state.library.membership).toBe('unknown');
+      expect(state.status.evidence).toBe('unknown');
+      expect(state.diagnostics.notes).toContain('ambiguous-button-state:no-filled-status');
+
+      const result = compareOwnership(STEAM_DIGITAL, state.library);
+      expect(result.classification).toBe('unknown');
+      expect(result.reasonCode).toBe('unsupported-read');
+      expect(result.classification).not.toBe('change-needed');
     });
 
     it('title mismatch does not masquerade as login/challenge', async () => {
@@ -905,9 +951,9 @@ describe('readVisibleBackloggdState — fixture coverage', () => {
       expect(state.game.visibleTitle).toBe('The Legend of Zelda: Breath of the Wild');
     });
 
-    it('read-only path does not click status buttons (evaluated via getByRole count — no interaction)', async () => {
-      // The button-based detection uses only getByRole + count(), which
-      // never clicks or mutates the page.  This is inherently read-only.
+    it('read-only path does not click status buttons', async () => {
+      // The button-based detection uses only locators, counts, and DOM
+      // evaluation. It never clicks or mutates the page.
       // The existing click-tracker tests above already prove the overall
       // reader never clicks any control, including status buttons.
       const state = await readFixture(
@@ -928,7 +974,55 @@ describe('readVisibleBackloggdState — fixture coverage', () => {
       expect(state.library.completeness).toBe('unsupported');
       expect(state.library.membership).toBe('unknown');
       expect(state.status.evidence).toBe('unknown');
-      expect(state.diagnostics.notes).toContain('ambiguous-button-state');
+      expect(state.diagnostics.notes).toContain('ambiguous-button-state:disabled-filled-status');
+    });
+
+    it('aria-pressed true enabled status button support is retained', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-aria-pressed.html',
+        'The Legend of Zelda: Breath of the Wild',
+        'backloggd-ownership-button-based-aria-pressed',
+      );
+      expect(state.library.membership).toBe('present');
+      expect(state.library.completeness).toBe('complete');
+      expect(state.status.value).toBe('Played');
+      expect(state.library.buttonStatus).toEqual({
+        value: 'Played',
+        evidence: 'aria-pressed',
+      });
+      expect(state.diagnostics.notes).toContain('button-based-evidence:aria-pressed');
+
+      const result = compareOwnership(STEAM_PLAYED, state.library);
+      expect(result.classification).toBe('already-present');
+      expect(result.reasonCode).toBe('button-status-match');
+    });
+
+    it('disabled aria-pressed true status button remains unsupported', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-disabled-aria-pressed.html',
+        'The Legend of Zelda: Breath of the Wild',
+        'backloggd-ownership-button-based-disabled-aria-pressed',
+      );
+      expect(state.library.completeness).toBe('unsupported');
+      expect(state.library.membership).toBe('unknown');
+      expect(state.status.evidence).toBe('unknown');
+      expect(state.diagnostics.notes).toContain('ambiguous-button-state:no-filled-status');
+    });
+
+    it('mismatched filled container class does not produce false status', async () => {
+      const state = await readFixture(
+        'backloggd-ownership-button-based-mismatched-container.html',
+        'Hollow Knight',
+        'backloggd-ownership-button-based-mismatched-container',
+      );
+      expect(state.library.completeness).toBe('unsupported');
+      expect(state.library.membership).toBe('unknown');
+      expect(state.status.evidence).toBe('unknown');
+
+      const result = compareOwnership(STEAM_DIGITAL, state.library);
+      expect(result.classification).not.toBe('already-present');
+      expect(result.classification).not.toBe('change-needed');
+      expect(result.classification).toBe('unknown');
     });
   });
 });

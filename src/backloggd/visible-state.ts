@@ -60,6 +60,10 @@ export interface VisibleBackloggdState {
       ownershipType: string | null;
     }[];
     addControl: 'unique' | 'absent' | 'ambiguous';
+    buttonStatus?: {
+      value: string;
+      evidence: 'btn-play-fill' | 'aria-pressed';
+    };
   };
   status: {
     value: string | null;
@@ -477,16 +481,75 @@ function escapeRegex(text: string): string {
 }
 
 /**
- * Detect the active (pressed/selected) status button on a button-based
- * Backloggd game page.
+ * Detect the active status button on a button-based Backloggd game page.
  *
- * Returns the canonical name of the active status button if exactly one
- * status button has a pressed/active state, or null if the state is
- * ambiguous (zero or multiple pressed buttons).
+ * Returns the canonical name and evidence of the active status button if
+ * exactly one visible enabled status button has a trustworthy state marker,
+ * or null if the state is ambiguous.
  *
  * Only recognizes the status names listed in BUTTON_BASED_STATUS_NAMES.
  */
-async function detectActiveStatusButton(page: Page): Promise<string | null> {
+type ActiveButtonStatusResult =
+  | { value: string; evidence: 'btn-play-fill' | 'aria-pressed' }
+  | { reason: 'no-filled-status' | 'multiple-filled-status' | 'disabled-filled-status' };
+
+async function detectActiveStatusButton(page: Page): Promise<ActiveButtonStatusResult> {
+  const filledStatuses: string[] = [];
+  let disabledFilledCount = 0;
+
+  for (const name of BUTTON_BASED_STATUS_NAMES) {
+    const button = page.getByRole('button', {
+      name: new RegExp(`^\\s*${escapeRegex(name)}\\s*$`, 'i'),
+      disabled: false,
+    });
+    const count = await button.count().catch(() => 0);
+    for (let index = 0; index < count; index++) {
+      const hasFilledContainer = await button
+        .nth(index)
+        .evaluate((el: Element, expectedClass: string) => {
+          const container = el.closest(
+            '.played-btn-container, .playing-btn-container, .backlog-btn-container, .wishlist-btn-container',
+          );
+          if (!container) return false;
+          return (
+            container.classList.contains('btn-play-fill') &&
+            container.classList.contains(expectedClass)
+          );
+        }, `${name.toLowerCase()}-btn-container`)
+        .catch(() => false);
+      if (hasFilledContainer) filledStatuses.push(name);
+    }
+
+    const disabledButton = page.getByRole('button', {
+      name: new RegExp(`^\\s*${escapeRegex(name)}\\s*$`, 'i'),
+      disabled: true,
+    });
+    const disabledCount = await disabledButton.count().catch(() => 0);
+    for (let index = 0; index < disabledCount; index++) {
+      const hasFilledContainer = await disabledButton
+        .nth(index)
+        .evaluate((el: Element, expectedClass: string) => {
+          const container = el.closest(
+            '.played-btn-container, .playing-btn-container, .backlog-btn-container, .wishlist-btn-container',
+          );
+          if (!container) return false;
+          return (
+            container.classList.contains('btn-play-fill') &&
+            container.classList.contains(expectedClass)
+          );
+        }, `${name.toLowerCase()}-btn-container`)
+        .catch(() => false);
+      if (hasFilledContainer) disabledFilledCount++;
+    }
+  }
+
+  if (filledStatuses.length === 1) {
+    return { value: filledStatuses[0], evidence: 'btn-play-fill' };
+  }
+  if (filledStatuses.length > 1) {
+    return { reason: 'multiple-filled-status' };
+  }
+
   for (const name of BUTTON_BASED_STATUS_NAMES) {
     const pressedLocator = page.getByRole('button', {
       name: new RegExp(`^\\s*${escapeRegex(name)}\\s*$`, 'i'),
@@ -500,11 +563,14 @@ async function detectActiveStatusButton(page: Page): Promise<string | null> {
         disabled: false,
       });
       const totalEnabledPressed = await allEnabledPressed.count().catch(() => 0);
-      if (totalEnabledPressed === 1) return name;
-      return null;
+      if (totalEnabledPressed === 1) return { value: name, evidence: 'aria-pressed' };
+      return { reason: 'multiple-filled-status' };
     }
   }
-  return null;
+
+  return disabledFilledCount > 0
+    ? { reason: 'disabled-filled-status' }
+    : { reason: 'no-filled-status' };
 }
 
 /**
@@ -539,12 +605,13 @@ async function tryButtonBasedState(
   if (!hasAnyStatusButton) return null;
 
   const activeStatus = await detectActiveStatusButton(page);
-  if (!activeStatus) {
-    notes.push('ambiguous-button-state');
+  if ('reason' in activeStatus) {
+    notes.push(`ambiguous-button-state:${activeStatus.reason}`);
     return null;
   }
 
-  notes.push(`button-based-status:${activeStatus}`);
+  notes.push(`button-based-status:${activeStatus.value}`);
+  notes.push(`button-based-evidence:${activeStatus.evidence}`);
 
   return {
     game: { visibleTitle, slug: expectedSlug, verified },
@@ -553,9 +620,10 @@ async function tryButtonBasedState(
       completeness: 'complete',
       ownershipEntries: [],
       addControl: 'absent',
+      buttonStatus: activeStatus,
     },
     status: {
-      value: activeStatus,
+      value: activeStatus.value,
       evidence: 'explicit-value',
     },
     diagnostics: {

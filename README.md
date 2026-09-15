@@ -60,19 +60,25 @@ npm run validate:config
 npm test
 ```
 
+PowerShell equivalent for copying the environment template:
+
+```powershell
+Copy-Item .env.example .env
+```
+
 ## Browser-assisted commands
 
 The ownership workflow (`ownership:compare`, `ownership:confirm`,
 `ownership:save`) uses Playwright to drive a local Chromium browser that you
 sign into Backloggd yourself.
 
-1. Install Playwright's browser binaries:
+1. Install Playwright's browser binaries (this applies on all platforms):
 
    ```bash
    npx playwright install chromium
    ```
 
-2. On some Linux distributions you may also need system dependencies:
+2. On some Linux distributions you may also need system dependencies (Linux only):
 
    ```bash
    npx playwright install-deps chromium
@@ -91,6 +97,13 @@ launches.
 > The examples above use bash. On Windows, use equivalent PowerShell or CMD
 > commands. Windows and macOS setups have not been validated for this release.
 
+Playwright's `npx playwright install chromium` command is cross-platform;
+`npx playwright install-deps chromium` is Linux-specific.
+
+On most platforms, `better-sqlite3` installs using a prebuilt binary. If Windows
+falls back to building it from source, install Python and Visual Studio Build
+Tools with the required C++ tooling.
+
 ## Backup before operational work
 
 Before running commands that mutate the database or browser state, make a copy
@@ -107,6 +120,13 @@ Example (bash):
 ```bash
 cp import.db "import.db.$(date +%F).backup"
 cp -r .playwright/backloggd-profile "backloggd-profile.$(date +%F).backup"
+```
+
+PowerShell equivalents:
+
+```powershell
+Copy-Item import.db "import.db.$(Get-Date -Format yyyy-MM-dd).backup"
+Copy-Item .playwright/backloggd-profile "backloggd-profile.$(Get-Date -Format yyyy-MM-dd).backup" -Recurse
 ```
 
 If something goes wrong, restore by closing all importer processes, replacing

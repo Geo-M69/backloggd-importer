@@ -12,4 +12,6 @@ import.fixture.db
 import.fixture.db-wal
 import.fixture.db-shm
 .playwright/
-.github/
+.github/*
+!.github/workflows/
+!.github/workflows/ci.yml

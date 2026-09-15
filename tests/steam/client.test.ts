@@ -134,6 +134,63 @@ describe('Steam client', () => {
   });
 
   describe('fetchOwnedGames', () => {
+    it('fetches live games with the expected request and caches the raw response', async () => {
+      const originalFetch = globalThis.fetch;
+      const userId = '76561198000000000';
+      const rawResponse = {
+        response: {
+          game_count: 1,
+          games: [
+            {
+              appid: 730,
+              name: 'Counter-Strike 2',
+              playtime_forever: 120,
+              playtime_windows_forever: 120,
+              playtime_mac_forever: 0,
+              playtime_linux_forever: 0,
+              playtime_2weeks: 30,
+              rtime_last_played: 1_700_000_000,
+              has_community_visible_stats: true,
+              img_icon_url: 'icon-hash',
+            },
+          ],
+        },
+      };
+      let requestUrl: URL | undefined;
+
+      globalThis.fetch = async (input: RequestInfo | URL) => {
+        requestUrl = new URL(String(input));
+        return new Response(JSON.stringify(rawResponse), { status: 200 });
+      };
+
+      try {
+        const result = await fetchOwnedGames(
+          { STEAM_API_KEY: 'test-key', STEAM_USER_ID: userId },
+          db,
+        );
+
+        expect(requestUrl?.host).toBe('api.steampowered.com');
+        expect(requestUrl?.pathname).toBe('/IPlayerService/GetOwnedGames/v1/');
+        expect(Object.fromEntries(requestUrl?.searchParams ?? [])).toEqual({
+          key: 'test-key',
+          steamid: userId,
+          include_appinfo: 'true',
+          include_played_free_games: 'true',
+          format: 'json',
+        });
+        expect(result).toEqual(rawResponse);
+
+        const cached = db
+          .prepare('SELECT response_body, expires_at FROM api_cache WHERE cache_key = ?')
+          .get(steamCacheKey(userId)) as { response_body: string; expires_at: string | null };
+        expect(JSON.parse(cached.response_body)).toEqual(rawResponse);
+        expect(cached.expires_at).toBeTruthy();
+        expect(new Date(cached.expires_at as string).getTime()).toBeGreaterThan(Date.now());
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
     it('loads fixture data when no credentials are provided', async () => {
       const data = await fetchOwnedGames(null, db);
       expect(data.response).toBeDefined();

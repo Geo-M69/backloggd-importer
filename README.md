@@ -62,18 +62,21 @@ npm test
 
 ## Available commands
 
-| Command                   | Description                           |
-| ------------------------- | ------------------------------------- |
-| `npm run build`           | Compile TypeScript to `dist/`         |
-| `npm run typecheck`       | Type-check without emitting           |
-| `npm test`                | Run all tests                         |
-| `npm run test:watch`      | Run tests in watch mode               |
-| `npm run lint`            | Lint source and test files            |
-| `npm run lint:fix`        | Lint and auto-fix                     |
-| `npm run format`          | Format source files with Prettier     |
-| `npm run format:check`    | Check formatting without writing      |
-| `npm run validate:config` | Validate loaded environment variables |
-| `npm run clean`           | Remove the `dist/` directory          |
+| Command                          | Description                                  |
+| -------------------------------- | -------------------------------------------- |
+| `npm run build`                  | Compile TypeScript to `dist/`                |
+| `npm run typecheck`              | Type-check without emitting                  |
+| `npm test`                       | Run all tests                                |
+| `npm run test:watch`             | Run tests in watch mode                      |
+| `npm run lint`                   | Lint source and test files                   |
+| `npm run lint:fix`               | Lint and auto-fix                            |
+| `npm run format`                 | Format source files with Prettier            |
+| `npm run format:check`           | Check formatting without writing             |
+| `npm run validate:config`        | Validate loaded environment variables        |
+| `npm run cache:clear -- --steam` | Clear the cached Steam library response      |
+| `npm run cache:clear -- --igdb`  | Clear the cached IGDB OAuth token            |
+| `npm run cache:clear -- --all`   | Clear both explicitly selected cache entries |
+| `npm run clean`                  | Remove the `dist/` directory                 |
 
 ## Project structure
 

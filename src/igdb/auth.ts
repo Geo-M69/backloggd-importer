@@ -169,5 +169,7 @@ export async function getAccessToken(
  */
 export function clearTokenCache(clientId: string, db?: Database.Database): void {
   const database = db ?? getDatabase();
-  database.prepare('DELETE FROM api_cache WHERE cache_key = ?').run(tokenCacheKey(clientId));
+  database
+    .prepare('DELETE FROM api_cache WHERE cache_key COLLATE BINARY = ?')
+    .run(tokenCacheKey(clientId));
 }

@@ -21,6 +21,7 @@
     "format": "prettier --write 'src/**/*.ts' 'tests/**/*.ts' '*.{json,md,mjs}' 'fixtures/**/*.json'",
     "format:check": "prettier --check 'src/**/*.ts' 'tests/**/*.ts' '*.{json,md,mjs}' 'fixtures/**/*.json'",
     "validate:config": "node --import dotenv/config dist/config/validate.js",
+    "cache:clear": "node --import dotenv/config dist/cli/cache-clear.js",
     "steam:export": "node --import dotenv/config dist/cli/steam-export.js",
     "igdb:match": "node --import dotenv/config dist/cli/igdb-match.js",
     "import:propose": "node --import dotenv/config dist/cli/proposal-generate.js",

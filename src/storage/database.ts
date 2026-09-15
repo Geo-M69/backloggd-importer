@@ -595,6 +595,105 @@ export function openDatabase(dbPath: string): Database.Database {
   return db;
 }
 
+function assertUsableApiCacheSchema(db: Database.Database): void {
+  const table = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'api_cache'")
+    .get();
+  if (!table) {
+    throw new Error('api_cache table is unavailable; refusing to create or migrate it.');
+  }
+
+  const columns = db.pragma('table_info(api_cache)') as {
+    name: string;
+    type: string;
+    notnull: number;
+    pk: number;
+  }[];
+  const byName = new Map(columns.map((column) => [column.name, column]));
+  const hasTextColumn = (name: string) => byName.get(name)?.type.toUpperCase() === 'TEXT';
+  const primaryKeyColumns = columns.filter((column) => column.pk > 0);
+  const primaryKeyIndex = (
+    db.pragma('index_list(api_cache)') as {
+      name: string;
+      unique: number;
+      origin: string;
+    }[]
+  ).find((index) => index.origin === 'pk');
+  const primaryKeyIndexColumns = primaryKeyIndex
+    ? (
+        db
+          .prepare('SELECT seqno, name, coll, key FROM pragma_index_xinfo(?)')
+          .all(primaryKeyIndex.name) as {
+          seqno: number;
+          name: string | null;
+          coll: string;
+          key: number;
+        }[]
+      ).filter((column) => column.key === 1)
+    : [];
+  const hasCanonicalCacheKey =
+    primaryKeyColumns.length === 1 &&
+    primaryKeyColumns[0]?.name === 'cache_key' &&
+    primaryKeyColumns[0]?.pk === 1 &&
+    primaryKeyIndex?.unique === 1 &&
+    primaryKeyIndexColumns.length === 1 &&
+    primaryKeyIndexColumns[0]?.seqno === 0 &&
+    primaryKeyIndexColumns[0]?.name === 'cache_key' &&
+    primaryKeyIndexColumns[0]?.coll.toUpperCase() === 'BINARY';
+
+  if (
+    !hasCanonicalCacheKey ||
+    !hasTextColumn('cache_key') ||
+    !hasTextColumn('response_body') ||
+    byName.get('response_body')?.notnull !== 1 ||
+    !hasTextColumn('fetched_at') ||
+    byName.get('fetched_at')?.notnull !== 1 ||
+    !hasTextColumn('expires_at')
+  ) {
+    throw new Error('api_cache schema is unusable; refusing to create or migrate it.');
+  }
+
+  const deleteTrigger = db
+    .prepare(
+      "SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND lower(tbl_name) = 'api_cache' LIMIT 1",
+    )
+    .get();
+  if (deleteTrigger) {
+    throw new Error('api_cache triggers are unsupported; refusing cache deletion.');
+  }
+
+  const persistentTables = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND substr(name, 1, 7) COLLATE BINARY != 'sqlite_'",
+    )
+    .all() as { name: string }[];
+  const hasInboundForeignKey = persistentTables.some((persistentTable) =>
+    (
+      db.prepare('SELECT "table" FROM pragma_foreign_key_list(?)').all(persistentTable.name) as {
+        table: string;
+      }[]
+    ).some((foreignKey) => foreignKey.table.toLowerCase() === 'api_cache'),
+  );
+  if (hasInboundForeignKey) {
+    throw new Error('api_cache inbound foreign keys are unsupported; refusing cache deletion.');
+  }
+}
+
+export function openCacheDatabase(dbPath: string): Database.Database {
+  const db = new Database(dbPath, { fileMustExist: true });
+  try {
+    assertUsableApiCacheSchema(db);
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
+}
+
+export function closeCacheDatabase(db: Database.Database): void {
+  db.close();
+}
+
 /**
  * Close the database connection and reset the singleton.
  */

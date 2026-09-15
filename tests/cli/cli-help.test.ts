@@ -39,6 +39,11 @@ interface CliHelpExpectation {
 
 const cliEntries: CliHelpExpectation[] = [
   {
+    name: 'cache:clear',
+    sourceName: 'cache-clear',
+    usagePattern: /Usage: npm run cache:clear/,
+  },
+  {
     name: 'steam:export',
     sourceName: 'steam-export',
     usagePattern: /Usage: npm run steam:export/,
@@ -125,6 +130,7 @@ describe('CLI help safety — all entrypoints', () => {
         const runnerStartSearch = [
           'export async function runOwnershipCompareCli',
           'export async function runOwnershipRetryFailedCli',
+          'export async function runCacheClearCli',
         ]
           .map((needle) => source.indexOf(needle))
           .find((idx) => idx !== -1);

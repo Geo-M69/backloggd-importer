@@ -402,7 +402,9 @@ export function validateSteamResponse(raw: RawSteamResponse): RawSteamResponse {
  */
 export function clearSteamCache(steamUserId: string, db?: Database.Database): void {
   const database = db ?? getDatabase();
-  database.prepare('DELETE FROM api_cache WHERE cache_key = ?').run(steamCacheKey(steamUserId));
+  database
+    .prepare('DELETE FROM api_cache WHERE cache_key COLLATE BINARY = ?')
+    .run(steamCacheKey(steamUserId));
 }
 
 /**

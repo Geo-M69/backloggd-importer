@@ -9,6 +9,25 @@ account changes.
 
 See [ROADMAP.md](ROADMAP.md) for the planned milestones and MVP boundary.
 
+## Current v1 support boundary
+
+Supported and demonstrated: Steam/IGDB import and matching, proposal review,
+manifest export and item seeding, checkpoint/state-machine safety, and
+conservative read-only ownership comparison. Comparison handles unknown,
+conflict, and login/challenge/rate-limit outcomes safely. The ownership flow
+is deliberately separated into compare → plan → explicit confirmation → save.
+
+Guarded confirmation, staging, and final-save paths are implemented, but the
+live ownership-add path has not been demonstrated. In particular, the observed
+button-only Backloggd UI provides no trustworthy ownership-absence evidence:
+all-unfilled or non-pressed controls are `unknown` and are never eligible as
+proof of `change-needed`. Unsupported or ambiguous UI must not be treated as
+absence, and this release makes no claim of verified live final-save behavior.
+This is a safety limitation, not permission to weaken the absence-proof gate.
+
+Release packages must be created from tracked files only; local credentials,
+databases, and browser-profile data are not release artifacts.
+
 ## Prerequisites
 
 - **Node.js** >= 20

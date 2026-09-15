@@ -9,6 +9,15 @@ operator-gated process.
 > Each step is intentionally separated so you can inspect intermediate state
 > before committing to a destructive action.
 
+> **Current v1 boundary**: The guarded confirmation, staging, and final-save
+> architecture is implemented, but no live ownership-add path has been
+> demonstrated. The observed button-only UI has no trustworthy
+> ownership-absence signal: all-unfilled or non-pressed controls are `unknown`,
+> not `change-needed`, and are ineligible for confirmation or save. Do not use
+> confirmation, staging, or save merely to demonstrate the path. This is a
+> deliberate safety gate; unsupported or ambiguous UI must never be treated as
+> absence.
+
 ---
 
 ## Supervised dry-run checklist
@@ -454,8 +463,12 @@ be stale.  Then retry confirmation.
 - The item remains in the `importing` state.
 - Manually verify the Backloggd game page to determine whether the save
   was actually applied.
-- If applied, manually transition the item to `saved`.
-- If not applied, retry the save.
+- Do **not** manually transition the item to `saved`; `saved` requires
+  verified final-save proof through the audited save path.
+- Only if trustworthy evidence establishes that the prior save did not apply,
+  explicitly reconcile the unresolved item before considering a retry. If the
+  prior outcome remains uncertain, leave it non-saved and make no further
+  transition or retry.
 
 ### If save returns browserFailed
 

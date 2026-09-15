@@ -148,6 +148,15 @@ Exit criteria:
 
 Add user-confirmed saves, verification, and resumability.
 
+**Current release boundary:** the ownership workflow implementation and its
+guardrails are complete, including conservative read-only comparison and the
+separated compare → plan → confirmation → save architecture. The live
+ownership-add path is not yet demonstrated: the observed button-only UI does
+not provide trustworthy ownership-absence evidence, so all-unfilled or
+non-pressed controls remain `unknown`, never `change-needed`. No verified live
+confirmation, staging, or final save is claimed. This deliberate safety gate
+must not be weakened to make unsupported UI eligible.
+
 - [ ] Compare each proposal with existing Backloggd data.
 - [ ] Skip changes that are already present.
 - [ ] Preserve other platforms and existing library entries.
@@ -165,7 +174,7 @@ Exit criteria:
 - Restarting the same import results in no unintended changes.
 - Failed items remain reviewable and retryable.
 
-This milestone is the first usable release.
+This milestone defines the first fully live-validated usable release.
 
 ## Milestone 6 — Hardening and packaging
 

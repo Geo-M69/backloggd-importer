@@ -169,12 +169,16 @@ must not be weakened to make unsupported UI eligible.
 
 Exit criteria:
 
-- A 25-game pilot handles new entries, existing entries, skips, and deliberate
-  interruption without creating duplicates.
+- The implementation supports a 25-game pilot that handles new entries,
+  existing entries, skips, and deliberate interruption without creating
+  duplicates; live demonstration of the ownership-add path is pending a
+  trustworthy Backloggd ownership-absence signal.
 - Restarting the same import results in no unintended changes.
 - Failed items remain reviewable and retryable.
 
-This milestone defines the first fully live-validated usable release.
+This milestone completes the ownership workflow implementation and its safety
+guardrails. A fully live-validated ownership-add release remains gated on the
+observed Backloggd UI exposing a trustworthy ownership-absence signal.
 
 ## Milestone 6 — Hardening and packaging
 
@@ -186,12 +190,18 @@ Make the MVP comfortable and dependable for users other than its author.
 - [ ] Provide clear setup, backup, recovery, and troubleshooting instructions.
 - [ ] Add data-reset and cache-refresh controls.
 - [ ] Test Windows, macOS, and Linux setup.
-- [ ] Run a reviewed 100-game import and document the results.
+- [ ] Run a reviewed read-only/supported-workflow hardening exercise with a
+      large library (for example, up to 100 games) and document the results.
+      The exercise validates the supported assisted workflow, pacing,
+      diagnostics, and recovery paths without requiring confirmation or save
+      when the observed Backloggd UI cannot establish trustworthy ownership
+      absence.
 - [ ] Contact Backloggd about the project and request integration guidance.
 
 Exit criteria:
 
-- A user can install and complete an assisted import from the documentation.
+- A user can install and complete the currently supported assisted workflow
+  from the documentation, within the v0.1.0 ownership limitation.
 - Common failures produce actionable messages rather than partial silent work.
 - The security and account-safety assumptions are documented.
 
@@ -237,7 +247,10 @@ The MVP consists of Milestones 0 through 5. It is complete when a user can:
 1. Import and match a Steam library.
 2. Review and approve exact proposed changes.
 3. Sign in to Backloggd themselves.
-4. Apply entries one at a time with explicit confirmation.
+4. Apply entries one at a time with explicit confirmation when the observed
+   Backloggd UI provides trustworthy evidence; the v0.1.0 release includes the
+   audited save path but has not live-demonstrated it because the button-only
+   UI does not expose trustworthy ownership absence.
 5. Stop and resume without duplicates or lost progress.
 
 ## Open decisions

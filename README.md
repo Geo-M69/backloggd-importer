@@ -60,6 +60,94 @@ npm run validate:config
 npm test
 ```
 
+## Browser-assisted commands
+
+The ownership workflow (`ownership:compare`, `ownership:confirm`,
+`ownership:save`) uses Playwright to drive a local Chromium browser that you
+sign into Backloggd yourself.
+
+1. Install Playwright's browser binaries:
+
+   ```bash
+   npx playwright install chromium
+   ```
+
+2. On some Linux distributions you may also need system dependencies:
+
+   ```bash
+   npx playwright install-deps chromium
+   ```
+
+3. The first time you run an ownership command, sign in to Backloggd manually
+   in the opened browser window. The persistent profile is stored at
+   `.playwright/backloggd-profile` by default (override with `--profile-dir`).
+   Do not delete this directory unless you are prepared to sign in again.
+
+Browser-assisted commands default to visible (non-headless) mode so you can
+supervise sign-in and any blocker pages. Pass `--headless` only after you have
+already authenticated and your environment supports unattended Chromium
+launches.
+
+> The examples above use bash. On Windows, use equivalent PowerShell or CMD
+> commands. Windows and macOS setups have not been validated for this release.
+
+## Backup before operational work
+
+Before running commands that mutate the database or browser state, make a copy
+of:
+
+- `import.db` (or the file pointed to by `DB_PATH`) — contains games, matches,
+  proposals, import sessions, items, and cached API responses.
+- `.playwright/backloggd-profile/` — contains your signed-in Backloggd browser
+  session.
+- Any manifest JSON files you generated and intend to reuse.
+
+Example (bash):
+
+```bash
+cp import.db "import.db.$(date +%F).backup"
+cp -r .playwright/backloggd-profile "backloggd-profile.$(date +%F).backup"
+```
+
+If something goes wrong, restore by closing all importer processes, replacing
+the files, and rerunning from a known-good step. Do not manually edit database
+rows to mark unresolved items as `saved`; `saved` requires the audited save
+path and verified proof. Preserving unresolved state is the safe recovery
+choice.
+
+## Troubleshooting
+
+### Browser does not launch or Chromium fails to start
+
+- Ensure Playwright browsers are installed:
+  `npx playwright install chromium`
+- On Linux, try installing system dependencies:
+  `npx playwright install-deps chromium`
+- In sandboxed or containerized Linux environments, Chromium may fail with
+  `sandbox_host_linux.cc ... Operation not permitted`. This is an environment
+  limitation, not a product failure. Run browser-assisted commands on a host
+  where Playwright Chromium can start.
+- The test suite includes browser tests; if they fail only during browser
+  launch, the host likely cannot run the Chromium sandbox.
+
+### `ownership:compare` exits with unsafe outcomes
+
+This is expected when the live Backloggd UI cannot be read unambiguously.
+Review the output, do not proceed to confirmation or save, and follow the
+recovery steps in [`docs/ownership-workflow.md`](docs/ownership-workflow.md).
+
+### Lost or corrupted browser profile
+
+Delete `.playwright/backloggd-profile` and sign in again during the next
+ownership command.
+
+### Stale `importing` rows
+
+If a process is interrupted, an item may remain in the `importing` state. Do
+not manually mark it `saved`. Treat it as unresolved: investigate the item on
+Backloggd, then use the retry workflow documented in
+[`docs/ownership-workflow.md`](docs/ownership-workflow.md).
+
 ## Available commands
 
 | Command                          | Description                                  |

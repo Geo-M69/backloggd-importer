@@ -218,6 +218,15 @@ describe('import:seed-items CLI — executable behavior', () => {
     return buildManifest(importSessionId, db);
   }
 
+  function buildValidManifestFromFreshDb(importSessionId = 'test-seed-session'): ImportManifest {
+    const db = createDb();
+    try {
+      return buildValidManifest(db, importSessionId);
+    } finally {
+      db.close();
+    }
+  }
+
   function countImportItems(db: Database.Database): number {
     const row = db.prepare('SELECT COUNT(*) AS cnt FROM import_items').get() as { cnt: number };
     return row.cnt;
@@ -293,7 +302,7 @@ describe('import:seed-items CLI — executable behavior', () => {
     seedApprovedProposal(db, 'p-seed-valid-2', 440);
     db.close();
 
-    const manifest = buildValidManifest(createDb());
+    const manifest = buildValidManifestFromFreshDb();
     const manifestPath = writeManifest(manifest, 'valid-manifest.json');
 
     const env = liveModeEnv(dbPath);
@@ -339,7 +348,7 @@ describe('import:seed-items CLI — executable behavior', () => {
     seedApprovedProposal(db, 'p-no-confirm', 730);
     db.close();
 
-    const manifest = buildValidManifest(createDb());
+    const manifest = buildValidManifestFromFreshDb();
     const manifestPath = writeManifest(manifest, 'no-confirm-manifest.json');
 
     const env = liveModeEnv(dbPath);
@@ -369,7 +378,7 @@ describe('import:seed-items CLI — executable behavior', () => {
     expect(approvedBefore).toBeGreaterThan(0);
     db.close();
 
-    const manifest = buildValidManifest(createDb());
+    const manifest = buildValidManifestFromFreshDb();
     const manifestPath = writeManifest(manifest, 'no-status-change-manifest.json');
 
     const env = liveModeEnv(dbPath);
@@ -393,7 +402,7 @@ describe('import:seed-items CLI — executable behavior', () => {
     seedApprovedProposal(db, 'p-idempotent', 730);
     db.close();
 
-    const manifest = buildValidManifest(createDb());
+    const manifest = buildValidManifestFromFreshDb();
     const manifestPath = writeManifest(manifest, 'idempotent-manifest.json');
 
     const env = liveModeEnv(dbPath);

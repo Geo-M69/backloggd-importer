@@ -21,6 +21,7 @@ import { resolve } from 'node:path';
 
 const RUNBOOK_PATH = resolve('docs/ownership-workflow.md');
 const RUNBOOK = readFileSync(RUNBOOK_PATH, 'utf-8');
+const normalizedRunbook = RUNBOOK.replace(/\r\n/g, '\n');
 
 const PACKAGE_JSON_PATH = resolve('package.json');
 const PACKAGE_JSON = readFileSync(PACKAGE_JSON_PATH, 'utf-8');
@@ -124,8 +125,8 @@ describe('ownership-workflow runbook — command coverage', () => {
   //          operator flow (seeding must happen before live comparison)
   // -----------------------------------------------------------------------
   it('documents import:seed-items before ownership:compare in the operator flow', () => {
-    const seedIdx = RUNBOOK.indexOf('import:seed-items');
-    const compareIdx = RUNBOOK.indexOf('ownership:compare');
+    const seedIdx = normalizedRunbook.indexOf('import:seed-items');
+    const compareIdx = normalizedRunbook.indexOf('ownership:compare');
     expect(seedIdx).toBeGreaterThanOrEqual(0);
     expect(compareIdx).toBeGreaterThan(seedIdx);
   });
@@ -140,7 +141,7 @@ describe('ownership-workflow runbook — command coverage', () => {
   });
 
   it('documents login-blocker recovery before returning to compare and before confirm/save', () => {
-    const sectionMatch = RUNBOOK.match(
+    const sectionMatch = normalizedRunbook.match(
       /### Login, challenge, or rate-limit recovery[\s\S]*?(?=\n---)/,
     );
     expect(sectionMatch).not.toBeNull();

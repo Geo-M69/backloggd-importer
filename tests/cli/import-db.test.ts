@@ -8,6 +8,15 @@ import { runProposalGenerate } from '../../src/cli/proposal-generate.js';
 import { runProposalApprove } from '../../src/cli/proposal-approve.js';
 import { runProposalManifest } from '../../src/cli/proposal-manifest.js';
 
+(() => {
+  let warmupDb: Database.Database | undefined;
+  try {
+    warmupDb = new Database(':memory:');
+  } finally {
+    warmupDb?.close();
+  }
+})();
+
 function createDb(path: string): Database.Database {
   const db = new Database(path);
   db.exec(getCreateTableSQL());

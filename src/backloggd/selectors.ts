@@ -463,10 +463,18 @@ export async function trySelectors(
   options: { timeout?: number; visible?: boolean } = {},
 ): Promise<{ locator: Locator; strategyName: string } | null> {
   const timeout = options.timeout ?? 3000;
-  for (const strategy of strategies) {
+  const deadline = performance.now() + timeout;
+  for (const [index, strategy] of strategies.entries()) {
+    const remainingTimeout = deadline - performance.now();
+    if (remainingTimeout <= 0) return null;
+
+    const strategyTimeout = remainingTimeout / (strategies.length - index);
+
     const locator = page.locator(strategy.selector);
     try {
-      await locator.first().waitFor({ state: options.visible ? 'visible' : 'attached', timeout });
+      await locator
+        .first()
+        .waitFor({ state: options.visible ? 'visible' : 'attached', timeout: strategyTimeout });
       const count = await locator.count();
       if (count > 0) {
         return { locator: locator.first(), strategyName: strategy.name };

@@ -43,7 +43,8 @@ const PROBE_TIMEOUT_MS = 200;
 const NAV_TIMEOUT_MS = 5000;
 
 /**
- * Timeout for page verification (trySelectors per-strategy).
+ * Timeout for page verification (total selector-search budget for
+ * trySelectors across all strategies, not per-strategy).
  */
 const VERIFY_TIMEOUT_MS = 1000;
 

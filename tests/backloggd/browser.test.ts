@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import { resolve } from 'node:path';
 import {
@@ -12,6 +12,7 @@ import {
   openerStrategies,
   textContainsForbiddenTerm,
 } from '../../src/backloggd/selectors.js';
+import type { SelectorStrategy } from '../../src/backloggd/selectors.js';
 import { readPageState, verifyGamePage } from '../../src/backloggd/page-reader.js';
 import {
   detectLoginState,
@@ -140,6 +141,69 @@ describe('backloggd browser fixture tests', () => {
         timeout: 500,
       });
       expect(result).toBeNull();
+      await page.close();
+    });
+
+    it('allocates one bounded timeout across valid missing strategies', async () => {
+      const strategies: SelectorStrategy[] = [
+        { name: 'missing-one', selector: '#missing-one' },
+        { name: 'missing-two', selector: '#missing-two' },
+        { name: 'missing-three', selector: '#missing-three' },
+      ];
+      const observedTimeouts: number[] = [];
+      let now = 1000;
+      const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+      const page = {
+        locator: () => ({
+          first: () => ({
+            waitFor: async ({ timeout }: { timeout: number }) => {
+              observedTimeouts.push(timeout);
+              now += timeout;
+              throw new Error('missing');
+            },
+          }),
+          count: async () => 0,
+        }),
+      } as unknown as Page;
+
+      try {
+        const result = await trySelectors(page, strategies, { visible: true, timeout: 300 });
+
+        expect(result).toBeNull();
+        expect(observedTimeouts).toEqual([100, 100, 100]);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+    it('uses a valid later fallback after a valid missing selector', async () => {
+      const page = await context.newPage();
+      await page.setContent('<html><body><button id="late-match"></button></body></html>');
+      const strategies: SelectorStrategy[] = [
+        { name: 'missing', selector: '#missing' },
+        { name: 'late-match', selector: '#late-match' },
+        { name: 'last-fallback', selector: '#last-fallback' },
+      ];
+
+      const result = await trySelectors(page, strategies, { visible: true, timeout: 300 });
+
+      expect(result?.strategyName).toBe('late-match');
+      await page.close();
+    });
+
+    it('returns null safely for zero and very small timeout budgets', async () => {
+      const page = await context.newPage();
+      await page.setContent('<html><body></body></html>');
+      const strategies: SelectorStrategy[] = [{ name: 'missing', selector: '#missing' }];
+
+      const zeroBudgetResult = await trySelectors(page, strategies, { visible: true, timeout: 0 });
+      const verySmallBudgetResult = await trySelectors(page, strategies, {
+        visible: true,
+        timeout: 0.01,
+      });
+
+      expect(zeroBudgetResult).toBeNull();
+      expect(verySmallBudgetResult).toBeNull();
       await page.close();
     });
   });

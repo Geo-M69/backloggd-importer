@@ -77,6 +77,11 @@
 
       // Save — the ONLY final action clicked by the save executor
       document.getElementById('save-btn').addEventListener('click', function() {
+        // Trigger a save POST to Backloggd API (will be allowed by write guard)
+        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {
+          // Expected to be allowed or blocked; either is fine for fixture
+        });
+
         window.__saveClickCount++;
 
         // Update library section to reflect the saved values
@@ -87,11 +92,6 @@
 
         // Hide the editor after save
         document.getElementById('ownership-editor').style.display = 'none';
-
-        // Trigger a save POST to Backloggd API (will be allowed by write guard)
-        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {
-          // Expected to be allowed or blocked; either is fine for fixture
-        });
       });
 
       // Cancel

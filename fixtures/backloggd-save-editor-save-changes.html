@@ -56,10 +56,10 @@
       });
 
       document.getElementById('save-changes-btn').addEventListener('click', function() {
+        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {});
         window.__saveChangesClickCount++;
         updateOwnershipEntry();
         document.getElementById('ownership-editor').style.display = 'none';
-        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {});
       });
 
       document.getElementById('platform-select').addEventListener('change', function() {

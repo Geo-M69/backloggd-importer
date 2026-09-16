@@ -61,6 +61,9 @@
       // state (PlayStation/Physical) so post-save verification fails.
       // A fetch is still fired so the save request/response is observable.
       document.getElementById('save-btn').addEventListener('click', function() {
+        // Fire a save POST so the request is observable (Finding 2)
+        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {});
+
         window.__saveClickCount++;
         window.__saveSuccess = false; // explicitly NOT set to true
 
@@ -72,9 +75,6 @@
           '</li>';
 
         document.getElementById('ownership-editor').style.display = 'none';
-
-        // Fire a save POST so the request is observable (Finding 2)
-        fetch('https://backloggd.com/api/library/', { method: 'POST' }).catch(function() {});
       });
 
       document.getElementById('cancel-btn').addEventListener('click', function() {

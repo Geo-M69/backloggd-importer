@@ -680,6 +680,14 @@ async function clickFinalSave(
     // Record the wall-clock time for the late-detection window (Finding 1).
     const clickNodeWallTimeMs = Date.now();
 
+    const responseTimeout = Math.min(timeout, SAVE_RESPONSE_TIMEOUT_MS);
+    const observedResponsePromise = page
+      .waitForResponse((res) => isMatchingSaveRequest(res.request()), {
+        timeout: responseTimeout,
+      })
+      .then((response) => ({ status: response.status(), url: response.url() }))
+      .catch(() => null);
+
     await saveCandidate.locator.click({ timeout });
 
     // Read the browser-side audit state.  Both `__saveClickMarkerAt`
@@ -687,21 +695,10 @@ async function clickFinalSave(
     // so direct subtraction is correct (no Node/browser skew).
     const audit = await readSaveClickAudit(page);
 
-    // Wait for the expected save POST response.  `waitForResponse` resolves
-    // on the FIRST matching response.  Final correlation uses our page-side
-    // audit log and the click marker, not the response itself.
-    const responseTimeout = Math.min(timeout, SAVE_RESPONSE_TIMEOUT_MS);
-
-    let observedResponse: { status: number; url: string } | null = null;
-    try {
-      const response = await page.waitForResponse((res) => isMatchingSaveRequest(res.request()), {
-        timeout: responseTimeout,
-      });
-      observedResponse = { status: response.status(), url: response.url() };
-    } catch {
-      // Timed out or no matching response.
-      observedResponse = null;
-    }
+    // `waitForResponse` resolves on the FIRST matching response.  Final
+    // correlation uses our page-side audit log and the click marker, not the
+    // response itself.
+    const observedResponse = await observedResponsePromise;
 
     // =====================================================================
     // Finding 1: Wait for the full late-detection window to elapse from

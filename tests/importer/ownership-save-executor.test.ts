@@ -10,7 +10,7 @@
  * Plus all original tests 1-31 updated for the new save response requirements.
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
@@ -1103,10 +1103,23 @@ describe('ownership-save-executor — browser save', { timeout: 30000 }, () => {
   // -----------------------------------------------------------------------
   // Finding 2 test 3 — Save request returns 204
   // -----------------------------------------------------------------------
-  it('proceeds to post-save verification when save returns 204', async () => {
+  it('arms the response listener before an immediately fulfilled save response', async () => {
     const page = await context.newPage();
     await installSaveRoute(page, 204);
     const slug = 'backloggd-save-editor';
+    let matchingSaveRequestSeen = false;
+    let responseListenerArmedBeforeSaveRequest = false;
+    const onRequest = (request: { method: () => string; url: () => string }) => {
+      if (request.method().toUpperCase() === 'POST' && request.url() === SAVE_API_URL) {
+        matchingSaveRequestSeen = true;
+      }
+    };
+    page.on('request', onRequest);
+    const originalWaitForResponse = page.waitForResponse.bind(page);
+    const waitForResponseSpy = vi.spyOn(page, 'waitForResponse').mockImplementation((...args) => {
+      responseListenerArmedBeforeSaveRequest = !matchingSaveRequestSeen;
+      return originalWaitForResponse(...args);
+    });
 
     const pid = seedEligibleItem(db, {
       sessionId: SESSION_ID,
@@ -1116,21 +1129,26 @@ describe('ownership-save-executor — browser save', { timeout: 30000 }, () => {
     });
     createConfirmedConfirmation(db, SESSION_ID, pid);
 
-    const results = await runConfirmedOwnershipSave({
-      db,
-      sessionId: SESSION_ID,
-      page,
-      timeout: 5000,
-      resolvePageUrl: resolveFixturePageUrl,
-    });
+    try {
+      const results = await runConfirmedOwnershipSave({
+        db,
+        sessionId: SESSION_ID,
+        page,
+        timeout: 5000,
+        resolvePageUrl: resolveFixturePageUrl,
+      });
 
-    expect(results).toHaveLength(1);
-    expect(results[0].status).toBe('saved');
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe('saved');
+      expect(responseListenerArmedBeforeSaveRequest).toBe(true);
 
-    const afterItem = getItem(db, pid);
-    expect(afterItem?.status).toBe('saved');
-
-    await page.close();
+      const afterItem = getItem(db, pid);
+      expect(afterItem?.status).toBe('saved');
+    } finally {
+      waitForResponseSpy.mockRestore();
+      page.removeListener('request', onRequest);
+      await page.close();
+    }
   });
 
   // -----------------------------------------------------------------------

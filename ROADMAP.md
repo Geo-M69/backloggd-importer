@@ -196,7 +196,6 @@ Make the MVP comfortable and dependable for users other than its author.
       diagnostics, and recovery paths without requiring confirmation or save
       when the observed Backloggd UI cannot establish trustworthy ownership
       absence.
-- [ ] Contact Backloggd about the project and request integration guidance.
 
 Exit criteria:
 
@@ -263,7 +262,7 @@ The MVP consists of Milestones 0 through 5. It is complete when a user can:
    UI does not expose trustworthy ownership absence.
 5. Stop and resume without duplicates or lost progress.
 
-## Open decisions
+## Open decisions and future backlog
 
 - What playtime threshold, if any, should trigger a `Played` suggestion?
 - Should zero-playtime games default to `Backlog` or ownership only?
@@ -271,3 +270,5 @@ The MVP consists of Milestones 0 through 5. It is complete when a user can:
 - Is a local web interface preferable to a terminal interface for the first
   review workflow?
 - Does Backloggd want to support or collaborate on this importer?
+- Contact Backloggd about the project and request integration guidance. This
+  remains a future/backlog item, not part of the M6 engineering completion.

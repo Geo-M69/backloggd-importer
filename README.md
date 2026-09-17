@@ -12,10 +12,12 @@ See [ROADMAP.md](ROADMAP.md) for the planned milestones and MVP boundary.
 ## Current v1 support boundary
 
 Supported and demonstrated: Steam/IGDB import and matching, proposal review,
-manifest export and item seeding, checkpoint/state-machine safety, and
-conservative read-only ownership comparison. Comparison handles unknown,
-conflict, and login/challenge/rate-limit outcomes safely. The ownership flow
-is deliberately separated into compare → plan → explicit confirmation → save.
+manifest export and item seeding, checkpoint/state-machine safety,
+conservative read-only ownership comparison, and M6 hardening. Comparison
+handles unknown, conflict, and login/challenge/rate-limit outcomes safely. The
+ownership flow is deliberately separated into compare → plan → explicit
+confirmation → save. CI at commit `03b278a6` passed the full suite (48 files /
+1967 tests), including Chromium setup, on Ubuntu, Windows, and macOS.
 
 Guarded confirmation, staging, and final-save paths are implemented, but the
 live ownership-add path has not been demonstrated. In particular, the observed
@@ -95,7 +97,9 @@ already authenticated and your environment supports unattended Chromium
 launches.
 
 > The examples above use bash. On Windows, use equivalent PowerShell or CMD
-> commands. Windows and macOS setups have not been validated for this release.
+> commands. Automated CI validates install, Chromium setup, build, lint,
+> source/test typechecks, and the full test suite (48 files / 1967 tests) on
+> Ubuntu, Windows, and macOS.
 
 Playwright's `npx playwright install chromium` command is cross-platform;
 `npx playwright install-deps chromium` is Linux-specific.

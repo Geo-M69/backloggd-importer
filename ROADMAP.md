@@ -184,13 +184,13 @@ observed Backloggd UI exposing a trustworthy ownership-absence signal.
 
 Make the MVP comfortable and dependable for users other than its author.
 
-- [ ] Add integration tests around Steam and IGDB clients.
-- [ ] Add browser interaction tests using local HTML fixtures.
-- [ ] Redact keys, tokens, cookies, and personal identifiers from logs.
-- [ ] Provide clear setup, backup, recovery, and troubleshooting instructions.
-- [ ] Add data-reset and cache-refresh controls.
-- [ ] Test Windows, macOS, and Linux setup.
-- [ ] Run a reviewed read-only/supported-workflow hardening exercise with a
+- [x] Add integration tests around Steam and IGDB clients.
+- [x] Add browser interaction tests using local HTML fixtures.
+- [x] Redact keys, tokens, cookies, and personal identifiers from logs.
+- [x] Provide clear setup, backup, recovery, and troubleshooting instructions.
+- [x] Add data-reset and cache-refresh controls.
+- [x] Test Windows, macOS, and Linux setup.
+- [x] Run a reviewed read-only/supported-workflow hardening exercise with a
       large library (for example, up to 100 games) and document the results.
       The exercise validates the supported assisted workflow, pacing,
       diagnostics, and recovery paths without requiring confirmation or save
@@ -204,6 +204,16 @@ Exit criteria:
   from the documentation, within the v0.1.0 ownership limitation.
 - Common failures produce actionable messages rather than partial silent work.
 - The security and account-safety assumptions are documented.
+- Automated CI validates install, Chromium setup, build, lint, source/test
+  typechecks, and the full test suite (48 files / 1967 tests) on Ubuntu,
+  Windows, and macOS.
+- The interactive authenticated Backloggd workflow was physically validated on
+  Fedora; manual Windows/macOS account validation was not performed.
+- A 100-item read-only hardening exercise completed successfully within the
+  known v0.1.0 ownership limitation.
+- Dependency audit found 6 advisories (2 moderate, 4 high), all dev/test/build
+  only and not reachable in the production CLI; routine dependency hygiene
+  (including the Vitest major upgrade) may be deferred and does not block M6.
 
 ## Milestone 7 — Browser extension evaluation
 

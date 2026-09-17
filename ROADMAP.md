@@ -214,18 +214,31 @@ Exit criteria:
   only and not reachable in the production CLI; routine dependency hygiene
   (including the Vitest major upgrade) may be deferred and does not block M6.
 
-## Milestone 7 — Browser extension evaluation
+## Milestone 7 — Browser extension evaluation (evaluation-only complete)
 
 Decide whether an extension materially improves the supported workflow.
 
-- [ ] Compare extension installation with the Playwright experience.
-- [ ] Prototype communication with the local companion.
-- [ ] Limit host permissions to Backloggd and the local companion.
-- [ ] Confirm that Backloggd authentication remains browser-owned.
-- [ ] Re-evaluate maintenance cost when Backloggd changes its UI.
+A read-only feasibility audit concluded **`DEFER`**: a browser extension does
+not solve the current ownership-read limitation, and its write path cannot
+currently match the audited Playwright temporal write-guard / save-proof model.
+Packaging, permissions, companion IPC, store review, and UI maintenance add
+complexity that is not justified while the ownership-absence signal remains
+untrusted. No extension code has been created.
 
-Ship an extension only if it is meaningfully easier to use and no less safe
-than the Playwright workflow.
+Completed evaluation items:
+
+- [x] Compare extension installation with the Playwright experience.
+- [x] Confirm that Backloggd authentication remains browser-owned (an extension
+      could preserve browser-owned auth, but this does not fix the absence-proof
+      problem).
+- [x] Re-evaluate maintenance cost when Backloggd changes its UI.
+
+Deferred to future backlog:
+
+- [ ] Prototype communication between an extension and the local companion.
+- [ ] Limit host permissions to Backloggd and the local companion.
+- [ ] Build a packaged extension only if it is meaningfully easier to use and
+      no less safe than the Playwright workflow.
 
 ## Milestone 8 — Supported automation
 
@@ -272,3 +285,10 @@ The MVP consists of Milestones 0 through 5. It is complete when a user can:
 - Does Backloggd want to support or collaborate on this importer?
 - Contact Backloggd about the project and request integration guidance. This
   remains a future/backlog item, not part of the M6 engineering completion.
+- Investigate Backloggd's dedicated Library surface as a read-only source of
+  trustworthy ownership membership/absence evidence. Treat “not currently
+  visible” as absence only if deterministic search, stable IDs, explicit zero-
+  result state, and completeness/pagination proof are established.
+- Browser extension prototype remains deferred. Revisit only if a trustworthy
+  ownership signal is found and an extension becomes meaningfully easier to use
+  and no less safe than the Playwright workflow.

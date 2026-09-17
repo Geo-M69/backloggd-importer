@@ -13,11 +13,16 @@ See [ROADMAP.md](ROADMAP.md) for the planned milestones and MVP boundary.
 
 Supported and demonstrated: Steam/IGDB import and matching, proposal review,
 manifest export and item seeding, checkpoint/state-machine safety,
-conservative read-only ownership comparison, and M6 hardening. Comparison
-handles unknown, conflict, and login/challenge/rate-limit outcomes safely. The
-ownership flow is deliberately separated into compare → plan → explicit
-confirmation → save. CI at commit `03b278a6` passed the full suite (48 files /
-1967 tests), including Chromium setup, on Ubuntu, Windows, and macOS.
+conservative read-only ownership comparison, M6 hardening, and the Milestone 7
+browser-extension feasibility evaluation. Comparison handles unknown, conflict,
+and login/challenge/rate-limit outcomes safely. The ownership flow is
+deliberately separated into compare → plan → explicit confirmation → save. CI
+at commit `135149c0` passed the full suite (48 files / 1967 tests), including
+Chromium setup, on Ubuntu, Windows, and macOS.
+
+Milestone 7 evaluated a browser extension and concluded `DEFER`: an extension
+does not solve the current ownership-read limitation, and no extension code has
+been created. Playwright remains the supported write path.
 
 Guarded confirmation, staging, and final-save paths are implemented, but the
 live ownership-add path has not been demonstrated. In particular, the observed
